@@ -1,8 +1,4 @@
-import { Button } from '@/components/atomic/button';
-import { Field, FieldError, FieldGroup, FieldLabel, } from '@/components/atomic/field';
-import { Input } from '@/components/atomic/input';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 interface LoginFormProps {
   onSubmit?: (email: string, password: string) => void;
@@ -39,42 +35,47 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (validateForm()) {
       onSubmit?.(email, password);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-md">
-      <h1 className='text-xl font-semibold'>Sign in to Cubicles</h1>
-      <form onSubmit={handleSubmit}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="email">Email address</FieldLabel>
-              <Input 
-                id="email" 
-                type="text" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <FieldError>{errors.email}</FieldError>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <FieldError>{errors.password}</FieldError>
-            </Field>
-            <Link to={'/reset-password'}>Forgot password?</Link>
-            <Button type="submit" variant="default" size="lg">Sign in</Button>
-          </FieldGroup>
+    <div className="login-form-container">
+      <form onSubmit={handleSubmit} className="login-form">
+        <h2>Login</h2>
+        
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={errors.email ? 'error' : ''}
+            placeholder="Enter your email"
+          />
+          {errors.email && <span className="error-message">{errors.email}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={errors.password ? 'error' : ''}
+            placeholder="Enter your password"
+          />
+          {errors.password && <span className="error-message">{errors.password}</span>}
+        </div>
+
+        <button type="submit" className="submit-button">
+          Login
+        </button>
       </form>
-      <p>Don't have an account yet? <Link to={'/signup'}>Create account</Link></p>
     </div>
   );
 };

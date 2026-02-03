@@ -1,33 +1,34 @@
-// import { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import BasicLayout from './layouts/basic.layout'
-import { MainLayout } from './layouts/main.layout'
-import LoginPage from './pages/auth/login.page'
-import AuthLayout from './layouts/auth.layout'
-import SignupPage from './pages/auth/signup.page'
-import ResetPasswordPage from './pages/auth/resetPassword.page'
-import NewPasswordPage from './pages/auth/newPassword.page'
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
 function App() {
+  const [count, setCount] = useState(0)
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<BasicLayout />}>
-          <Route path="/" element={''} />
-        </Route>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/new-password" element={<NewPasswordPage />} />
-        </Route>
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={''} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <>
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
   )
 }
 
