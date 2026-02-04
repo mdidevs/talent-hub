@@ -64,6 +64,34 @@ export const registerUser = createAsyncThunk<
   }
 });
 
+export const resetPassword = createAsyncThunk<boolean, { email: string }, { rejectValue: string }>(
+  "auth/resetPassword",
+  async ({ email }, thunkAPI) => {
+    try {
+      // simulate sending reset email
+      await new Promise((res) => setTimeout(res, 250));
+      return true;
+    } catch (err: any) {
+      const message = getErrorMessage(err, "Reset password failed");
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const newPassword = createAsyncThunk<boolean, { token?: string; password: string }, { rejectValue: string }>(
+  'auth/newPassword',
+  async ({ token, password }, thunkAPI) => {
+    try {
+      // simulate applying new password (would normally use token + API)
+      await new Promise((res) => setTimeout(res, 250));
+      return true;
+    } catch (err: any) {
+      const message = getErrorMessage(err, 'Set new password failed');
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 export const logoutUser = createAsyncThunk<boolean,void,{ rejectValue: string }>("auth/logoutUser", async (_, thunkAPI) => {
   try {
     await authService.logout();
@@ -134,6 +162,31 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isLoading = false;
         state.error = null;
+      });
+    // resetPassword handled below to avoid doubling builder chain
+    builder
+      .addCase(resetPassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload ?? 'Reset failed';
+      });
+    builder
+      .addCase(newPassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(newPassword.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(newPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload ?? 'Set new password failed';
       });
   },
 });

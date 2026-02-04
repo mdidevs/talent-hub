@@ -29,3 +29,12 @@ export type LoginPayload = {
   email: string;
   password: string;
 };
+
+export type ResetPayload = {
+  email: string;
+};
+
+export type NewPasswordPayload = {
+  token?: string;
+  password: string;
+};
