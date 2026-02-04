@@ -1,77 +1,48 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/atomic/button';
 import { Field, FieldError, FieldGroup, FieldLabel, } from '@/components/atomic/field';
 import { Input } from '@/components/atomic/input';
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useLogin } from '@/hooks/auth';
+import { loginResolver } from '@/hooks/auth/login.hook';
 
-interface LoginFormProps {
-  onSubmit?: (email: string, password: string) => void;
-}
+type FormValues = {
+  email: string;
+  password: string;
+};
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({ email: '', password: '' });
+export const LoginForm: React.FC = () => {
+  const { login: doLogin, isLoading, error: loginError } = useLogin();
 
-  const validateForm = () => {
-    const newErrors = { email: '', password: '' };
-    let isValid = true;
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
+    resolver: loginResolver,
+    mode: 'onTouched',
+  });
 
-    if (!email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
-      isValid = false;
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (validateForm()) {
-      onSubmit?.(email, password);
-    }
+  const onSubmit = async (data: FormValues) => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    doLogin({ email: data.email, password: data.password });
   };
 
   return (
     <div className="space-y-8 max-w-md">
       <h1 className='text-xl font-semibold'>Sign in to Cubicles</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="email">Email address</FieldLabel>
-              <Input 
-                id="email" 
-                type="text" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <FieldError>{errors.email}</FieldError>
+              <Input id="email" type="text" {...register('email')} />
+              <FieldError>{(errors.email as any)?.message}</FieldError>
             </Field>
             <Field>
               <FieldLabel htmlFor="password">Password</FieldLabel>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <FieldError>{errors.password}</FieldError>
+              <Input id="password" type="password" {...register('password')} />
+              <FieldError>{(errors.password as any)?.message}</FieldError>
             </Field>
             <Link to={'/reset-password'}>Forgot password?</Link>
-            <Button type="submit" variant="default" size="lg">Sign in</Button>
+            {loginError && <FieldError>{loginError}</FieldError>}
+            <Button type="submit" variant="default" size="lg" disabled={isSubmitting || isLoading}>Sign in</Button>
           </FieldGroup>
       </form>
       <p>Don't have an account yet? <Link to={'/signup'}>Create account</Link></p>

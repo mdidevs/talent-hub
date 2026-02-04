@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { authService } from "./../../services/auth/auth.service";
+import { setUser as persistUser, setToken as persistToken } from "../../util/helpers/auth.helper";
 import type { AuthResponse, AuthState, User } from "./../../types/auth.type";
 
 const initialState: AuthState = {
@@ -24,7 +25,7 @@ const getErrorMessage = (err: unknown, fallback = "Something went wrong") => {
 // ---------- Thunks ----------
 export const loginUser = createAsyncThunk<AuthResponse,{ email: string; password: string },{ rejectValue: string }>("auth/loginUser", async ({ email, password }, thunkAPI) => {
   try {
-    return await authService.login(email, password);
+    // return await authService.login(email, password);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     const message =
@@ -40,13 +41,25 @@ export const registerUser = createAsyncThunk<
   { rejectValue: string }
 >("auth/registerUser", async ({ name, email, password }, thunkAPI) => {
   try {
-    return await authService.register(name, email, password);
- 
+    // Simulate a local registration flow without calling remote APIs.
+    const user: User = { id: String(Date.now()), name, email };
+    const token = `local-token-${Math.random().toString(36).slice(2)}`;
+
+    // Persist locally so the app can reload the authenticated state
+    try {
+      persistToken(token);
+      persistUser(user);
+    } catch (err) {
+      // ignore storage errors
+    }
+
+    // Small artificial delay to mimic async behavior
+    await new Promise((res) => setTimeout(res, 250));
+
+    return { user, token } as AuthResponse;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
-    const message =
-      err?.response?.data?.message ||
-      getErrorMessage(err, "Register failed");
+    const message = getErrorMessage(err, "Register failed");
     return thunkAPI.rejectWithValue(message);
   }
 });

@@ -18,3 +18,14 @@ export type AuthState = {
   isLoading: boolean;
   error: string | null;
 };
+
+export type RegisterPayload = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+export type LoginPayload = {
+  email: string;
+  password: string;
+};
