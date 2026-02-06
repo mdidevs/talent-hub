@@ -1,5 +1,5 @@
 import React from 'react'
-import LoginForm from './forms/auth/login.form'
+import LoginForm from '../forms/auth/login.form'
 
 const LoginView: React.FC = () => {
   const handleSubmit = () => {

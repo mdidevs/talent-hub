@@ -1,5 +1,5 @@
 import React from 'react'
-import NewPasswordForm from './forms/auth/newPassword.form'
+import NewPasswordForm from '../forms/auth/newPassword.form'
 
 const NewPasswordView: React.FC = () => {
   const handleSubmit = () => {

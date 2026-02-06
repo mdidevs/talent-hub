@@ -59,6 +59,15 @@
     --color-success-base: #1FC16B;
     --color-success-light: #C2F5DA;
     --color-success-lighter: #F0FDF4;
+
+    --sidebar-background: #F7F7F7;
+    --sidebar-foreground: #171717;
+    --sidebar-primary: #556BFC;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: rgba(85, 107, 252, 0.10);
+    --sidebar-accent-foreground: #171717;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: rgba(85, 107, 252, 0.0);
 }
 
 /* Dark Theme */
@@ -71,7 +80,7 @@
     --color-primary-alpha-10: rgba(117, 149, 255, 0.10);
     /* Secondary */
     --color-secondary-dark: #D4D4D4;
-    --color-secondary-base: #f4f4f5; 
+    --color-secondary-base: #F7F7F7; 
     --color-secondary-alpha-16: rgba(255, 255, 255, 0.16); 
     --color-secondary-alpha-10: rgba(255, 255, 255, 0.10);
     /* Static */
@@ -122,4 +131,13 @@
     --color-success-base: #1FC16B;
     --color-success-light: rgba(31, 193, 107, 0.24);
     --color-success-lighter: rgba(31, 193, 107, 0.16);
+
+    --sidebar-background: #171717;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #7595FF;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: rgba(117, 149, 255, 0.16);
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: rgba(85, 107, 252, 0.0);
 }
