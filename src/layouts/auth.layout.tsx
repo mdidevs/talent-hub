@@ -5,7 +5,7 @@ import { Outlet } from 'react-router-dom';
 
 const AuthLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-background-week-50">
+    <div className="min-h-screen bg-background-week-50 [&_a]:text-blue-500 [&_a]:hover:underline underline-offset-2">
         <div className='md:flex flex-1 '>
             <div className='md:w-6/12 flex flex-col justify-between gap-4 min-h-screen px-4 py-8 sm:px-12 md:px-16 lg:px-24'>
                 <Logo />

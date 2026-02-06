@@ -1,5 +1,5 @@
 import React from 'react'
-import ResetPasswordView from '../../views/resetPassword.view'
+import ResetPasswordView from '../../views/auth/resetPassword.view'
 
 const ResetPasswordPage: React.FC = () => {
 	return (

@@ -1,5 +1,5 @@
 import React from 'react'
-import ResetPasswordForm from './forms/auth/resetPassword.form'
+import ResetPasswordForm from '../forms/auth/resetPassword.form'
 
 const ResetPasswordView: React.FC = () => {
   const handleSubmit = () => {
