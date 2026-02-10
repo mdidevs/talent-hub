@@ -1,5 +1,5 @@
 import React from 'react'
-import LoginView from '../../views/login.view'
+import LoginView from '../../views/auth/login.view'
 
 
 const LoginPage: React.FC = () => {

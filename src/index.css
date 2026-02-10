@@ -2,6 +2,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 @import "./styles/theme.css";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 
 @theme {
     --color-primary-dark: var(--color-primary-dark);
@@ -67,6 +71,15 @@
     --color-success-light: var(--color-success-light);
     --color-success-lighter: var(--color-success-lighter);
 
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
     --font-sans: "Google Sans Flex", sans-serif;
     --font-title: 'inter', sans-serif;
     --font-serif: 'Georgia', serif;
@@ -77,16 +90,18 @@
         @apply bg-background-white-0 text-text-strong-950 font-sans;
     }
     h1, h2, h3, h4, h5, h6 {
-        @apply font-title font-semibold tracking-tight;
+        @apply font-title font-semibold tracking-tight text-text-strong-950;
     }
     p {
-        @apply text-sm;
+        @apply text-sm text-text-sub-600;
     }
     a {
-        @apply text-sm text-primary-base underline-offset-4 hover:underline;
+        @apply text-sm;
     }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  
 }
+

@@ -1,5 +1,5 @@
 import React from 'react'
-import NewPasswordView from '@/views/newPassword.view'
+import NewPasswordView from '@/views/auth/newPassword.view'
 
 
 const NewPasswordPage: React.FC = () => {
