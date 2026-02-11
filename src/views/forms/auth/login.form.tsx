@@ -5,6 +5,7 @@ import { Button } from '@/components/atomic/button';
 import { Field, FieldError, FieldGroup, FieldLabel, } from '@/components/atomic/field';
 import { Input } from '@/components/atomic/input';
 import { useLogin } from '@/hooks/auth';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { loginResolver } from '@/hooks/auth/login.hook';
 
 type FormValues = {
@@ -14,6 +15,16 @@ type FormValues = {
 
 export const LoginForm: React.FC = () => {
   const { login: doLogin, isLoading, error: loginError } = useLogin();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useLogin();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = (location.state as any)?.from || '/team';
+      navigate(redirect, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: loginResolver,
@@ -21,8 +32,16 @@ export const LoginForm: React.FC = () => {
   });
 
   const onSubmit = async (data: FormValues) => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    doLogin({ email: data.email, password: data.password });
+    // perform login and navigate on success
+    try {
+      const res: any = await doLogin({ email: data.email, password: data.password });
+      if (res && res.meta && res.meta.requestStatus === 'fulfilled') {
+        const redirect = (location.state as any)?.from || '/team';
+        navigate(redirect);
+      }
+    } catch (err) {
+      // noop, error handled in hook
+    }
   };
 
   return (

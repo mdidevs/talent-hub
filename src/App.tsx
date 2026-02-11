@@ -10,6 +10,7 @@ import SignupPage from './pages/auth/signup.page'
 import ResetPasswordPage from './pages/auth/resetPassword.page'
 import NewPasswordPage from './pages/auth/newPassword.page'
 import OrderWizardLayout from './layouts/order.layout'
+import ProtectedRoute from '@/components/route/ProtectedRoute'
 import TeamPage from './pages/order.tsx/wizard/team.page'
 import SeatPage from './pages/order.tsx/wizard/seat.page'
 import ReviewOrderPage from './pages/order.tsx/wizard/review.page'
@@ -23,22 +24,23 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<BasicLayout />}>
-            <Route path="/" element={''} />
+            {/* <Route path="/" element={<LoginPage />} /> */}
           </Route>
-          <Route element={<AuthLayout />}>
+          <Route element={<ProtectedRoute redirectIfAuthenticated={'/team'}><AuthLayout /></ProtectedRoute>}>
+            <Route path="/" element={<LoginPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/new-password" element={<NewPasswordPage />} />
           </Route>
-          <Route element={<OrderWizardLayout />}>
+          <Route element={<ProtectedRoute><OrderWizardLayout /></ProtectedRoute>}>
             <Route path="/team" element={<TeamPage />} />
             <Route path="/seat" element={<SeatPage />} />
             <Route path="/review" element={<ReviewOrderPage />} />
             <Route path="/agreement" element={<AgreementPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
           </Route>
-          <Route element={<MainLayout />}>
+          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={''} />
           </Route>
         </Routes>

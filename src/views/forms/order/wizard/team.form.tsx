@@ -6,11 +6,27 @@ import CategoryList from "@/components/molecule/order/wizard/team/categoryList";
 import ShifrShedulerCard from "@/components/molecule/order/wizard/team/shifrShedulerCard";
 import { Grid2X2, Rows3 } from "lucide-react";
 import { useState } from "react";
+import useWizard from '@/hooks/wizard/wizard.hook';
+import { useDispatch, useSelector } from 'react-redux';
+import { addShiftAssignment, removeShiftAssignment } from '@/store/wizard/wizard.slice';
+import { selectWizardShiftAssignments } from '@/store/wizard/wizard.selector';
 
 
 export const TeamForm = () => {
     const [listMode, setListMode] = useState<'grid' | 'rows'>('rows');
+    const { categories, isLoading, selected, add } = useWizard();
     
+    const dispatch = useDispatch();
+    const shiftAssignments = useSelector(selectWizardShiftAssignments);
+
+    const handleAssign = (shift: string, roleId: number | string) => {
+        dispatch(addShiftAssignment({ shift, categoryId: roleId }));
+    }
+
+    const handleRemove = (shift: string, roleId: number | string) => {
+        dispatch(removeShiftAssignment({ shift, categoryId: roleId }));
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row gap-8">
@@ -32,17 +48,43 @@ export const TeamForm = () => {
                         <h3 className='text-lg font-medium'>NOC Professionals</h3>
                         {listMode === 'grid' ?
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <CategoryCard />
-                                <CategoryCard />
-                                <CategoryCard />
-                                <CategoryCard />
+                                {isLoading ? (
+                                    <div>Loading...</div>
+                                ) : (
+                                    categories.map((c) => {
+                                        const sel = selected.find((s) => String(s.categoryId) === String(c.id));
+                                        const qty = sel ? sel.qty : c.qty;
+                                        return (
+                                            <CategoryCard
+                                                key={c.id}
+                                                id={c.id}
+                                                title={c.title}
+                                                description={c.description}
+                                                price={c.price}
+                                                unit={c.unit}
+                                                badges={c.badges}
+                                                qty={qty}
+                                                onAdd={(id, qty = 1) => {
+                                                    add(id, qty);
+                                                }}
+                                            />
+                                        )
+                                    })
+                                )}
                             </div>
                             :
                             <div className="space-y-3">
-                                <CategoryList />
-                                <CategoryList />
-                                <CategoryList />
-                                <CategoryList />
+                                {isLoading ? (
+                                    <div>Loading...</div>
+                                ) : (
+                                    categories.map((c) => {
+                                        const sel = selected.find((s) => String(s.categoryId) === String(c.id));
+                                        const qty = sel ? sel.qty : c.qty;
+                                        return (
+                                            <CategoryList key={c.id} id={c.id} title={c.title} description={c.description} price={c.price} unit={c.unit} qty={qty} onAdd={(id, qty = 1) => { add(id, qty); }} />
+                                        )
+                                    })
+                                )}
                             </div>
                         }
                     </div>
@@ -54,9 +96,9 @@ export const TeamForm = () => {
                     </div>
 
                     <div className="space-y-4">
-                        <ShifrShedulerCard />
-                        <ShifrShedulerCard />
-                        <ShifrShedulerCard />
+                        <ShifrShedulerCard shiftKey="morning" title="Morning Shift" timeRange="09:00 AM - 05:00 PM (PST)" assigned={shiftAssignments.morning} onAssign={handleAssign} onRemove={handleRemove} />
+                        <ShifrShedulerCard shiftKey="evening" title="Evening Shift" timeRange="01:00 PM - 09:00 PM (PST)" assigned={shiftAssignments.evening} onAssign={handleAssign} onRemove={handleRemove} />
+                        <ShifrShedulerCard shiftKey="night" title="Night Shift" timeRange="09:00 PM - 05:00 AM (PST)" assigned={shiftAssignments.night} onAssign={handleAssign} onRemove={handleRemove} />
                     </div>
                 </div>
             </div>

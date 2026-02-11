@@ -3,29 +3,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/atomic/ta
 import SeatGrid from "@/components/molecule/order/wizard/seat/seatGrid"
 import SidebarRoles from "@/components/molecule/order/wizard/seat/sidebarRole"
 import { useState } from "react"
+import { useSelector, useDispatch } from 'react-redux';
+import { selectWizardShiftAssignments, selectWizardSeatAssignments } from '@/store/wizard/wizard.selector';
+import { setSeatAssignment } from '@/store/wizard/wizard.slice';
 
 const SeatForm = () => {
     const [selectedRole, setSelectedRole] = useState<number | null>(null)
-    const [seatAssignments, setSeatAssignments] = useState<Record<string, number>>({})
+    const [activeShift, setActiveShift] = useState<'morning'|'evening'|'night'>('morning')
+    const dispatch = useDispatch();
+
+    const shiftRoleAssignments = useSelector(selectWizardShiftAssignments);
+    const shiftSeatAssignments = useSelector(selectWizardSeatAssignments);
+    const seatAssignments = shiftSeatAssignments[activeShift] ?? {};
+
+    const handleShiftChange = (v: string) => {
+        const s = v as 'morning'|'evening'|'night'
+        setActiveShift(s)
+        const allowed = shiftRoleAssignments?.[s] ?? []
+        if (allowed && allowed.length > 0) setSelectedRole(allowed[0])
+        else setSelectedRole(null)
+    }
 
     const handleSeatClick = (seatId: string) => {
         if (selectedRole === null) return
 
-        setSeatAssignments(prev => {
-            const newAssignments = { ...prev }
+        const current = seatAssignments[seatId]
 
-            // Find and remove any existing seat assigned to this role
-            Object.entries(newAssignments).forEach(([seat, role]) => {
-                if (role === selectedRole) {
-                    delete newAssignments[seat]
-                }
-            })
+        // toggle: if same role, remove assignment
+        if (String(current) === String(selectedRole)) {
+            dispatch(setSeatAssignment({ shift: activeShift, seatId, categoryId: undefined }))
+            return
+        }
 
-            // Assign the new seat to this role
-            newAssignments[seatId] = selectedRole
-
-            return newAssignments
-        })
+        // assign (this reducer will remove existing seat for the role in that shift)
+        dispatch(setSeatAssignment({ shift: activeShift, seatId, categoryId: selectedRole }))
     }
     return (
         <div className="space-y-8">
@@ -48,7 +59,7 @@ const SeatForm = () => {
                 </Select>
             </div>
 
-            <Tabs defaultValue="morning">
+            <Tabs defaultValue="morning" onValueChange={handleShiftChange}>
                 <TabsList>
                     <TabsTrigger value="morning">Morning Shift</TabsTrigger>
                     <TabsTrigger value="evening">Evening Shift</TabsTrigger>
@@ -61,6 +72,7 @@ const SeatForm = () => {
                                 selectedRole={selectedRole} 
                                 onSelectRole={setSelectedRole}
                                 seatAssignments={seatAssignments}
+                                allowedRoleIds={(shiftRoleAssignments.morning) ?? []}
                             />
                         </div>
                         
@@ -84,8 +96,68 @@ const SeatForm = () => {
                         </div>
                     </div>
                 </TabsContent>
-                <TabsContent value="evening"></TabsContent>
-                <TabsContent value="night"></TabsContent>
+                <TabsContent value="evening">
+                    <div  className="flex flex-col md:flex-row bg-background-white-0 border border-stroke-soft-200 rounded-md">
+                        <div className="md:w-3/12 p-2 md:p-4">
+                            <SidebarRoles 
+                                selectedRole={selectedRole} 
+                                onSelectRole={setSelectedRole}
+                                seatAssignments={seatAssignments}
+                                allowedRoleIds={(shiftRoleAssignments.evening) ?? []}
+                            />
+                        </div>
+                        
+                         <div className="md:w-9/12 p-2 md:p-4 space-y-4 border-l border-stroke-soft-200">
+                            <div className="flex flex-col md:flex-row justify-between gap-4">
+                                <div className="flex gap-4 items-center">
+                                    <h3>Evening Shift </h3>
+                                    <p>01:00 PM - 09:00 PM (PST)</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <p><span className="h-3 w-3 inline-block bg-primary-base rounded-xs"></span> Selected</p>
+                                    <p><span className="h-3 w-3 inline-block bg-primary-alpha-16 rounded-xs"></span> Occupied</p>
+                                    <p><span className="h-3 w-3 inline-block bg-background-white-0 border border-primary-alpha-16 rounded-xs"></span> Available</p>
+                                </div>
+                            </div>
+                            <SeatGrid 
+                                selectedRole={selectedRole} 
+                                seatAssignments={seatAssignments}
+                                onSeatClick={handleSeatClick}
+                            />
+                        </div>
+                    </div>
+                </TabsContent>
+                <TabsContent value="night">
+                    <div  className="flex flex-col md:flex-row bg-background-white-0 border border-stroke-soft-200 rounded-md">
+                        <div className="md:w-3/12 p-2 md:p-4">
+                            <SidebarRoles 
+                                selectedRole={selectedRole} 
+                                onSelectRole={setSelectedRole}
+                                seatAssignments={seatAssignments}
+                                allowedRoleIds={(shiftRoleAssignments.night) ?? []}
+                            />
+                        </div>
+                        
+                        <div className="md:w-9/12 p-2 md:p-4 space-y-4 border-l border-stroke-soft-200">
+                            <div className="flex flex-col md:flex-row justify-between gap-4">
+                                <div className="flex gap-4 items-center">
+                                    <h3>Night Shift </h3>
+                                    <p>09:00 PM - 05:00 AM (PST)</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <p><span className="h-3 w-3 inline-block bg-primary-base rounded-xs"></span> Selected</p>
+                                    <p><span className="h-3 w-3 inline-block bg-primary-alpha-16 rounded-xs"></span> Occupied</p>
+                                    <p><span className="h-3 w-3 inline-block bg-background-white-0 border border-primary-alpha-16 rounded-xs"></span> Available</p>
+                                </div>
+                            </div>
+                            <SeatGrid 
+                                selectedRole={selectedRole} 
+                                seatAssignments={seatAssignments}
+                                onSeatClick={handleSeatClick}
+                            />
+                        </div>
+                    </div>
+                </TabsContent>
             </Tabs>
 
         </div>

@@ -1,62 +1,33 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/atomic/table'
 import React from 'react'
+import { useSelector } from 'react-redux'
+import { selectWizardCategories, selectWizardShiftAssignments, selectWizardSeatAssignments, selectWizardSelected } from '@/store/wizard/wizard.selector'
 
-const invoices = [
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  {
-    service: "NOC L1 Support Engineer ",
-    seat: "A26",
-    shift: "09:00 AM - 05:00 PM (PST)",
-    rate: "$32",
-    subtotal: "$640.00",
-  },
-  
-]
+const shiftLabels: Record<string, string> = {
+  morning: '09:00 AM - 05:00 PM (PST)',
+  evening: '01:00 PM - 09:00 PM (PST)',
+  night: '09:00 PM - 05:00 AM (PST)'
+}
+
 const ReviewOrder: React.FC = () => {
-    //   const handleSubmit = () => {
-    //     // TODO: integrate auth service
-    //   }
+    const categories = useSelector(selectWizardCategories)
+    const selected = useSelector(selectWizardSelected)
+    const shiftAssignments = useSelector(selectWizardShiftAssignments)
+    const shiftSeatAssignments = useSelector(selectWizardSeatAssignments)
+
+    // build invoice rows from seat assignments across shifts
+    const rows: Array<{ service: string; seat: string; shift: string; rate: number; subtotal: number }> = []
+
+    Object.entries(shiftSeatAssignments).forEach(([shift, seats]) => {
+      Object.entries(seats).forEach(([seatId, categoryId]) => {
+        const cat = categories.find((c) => String(c.id) === String(categoryId))
+        if (!cat) return
+        const rate = Number(cat.price ?? 0)
+        rows.push({ service: cat.title, seat: seatId, shift: shiftLabels[shift] ?? shift, rate, subtotal: rate })
+      })
+    })
+
+    const subtotal = rows.reduce((s, r) => s + r.subtotal, 0)
 
     return (
         <div className='space-y-8'>
@@ -76,35 +47,21 @@ const ReviewOrder: React.FC = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {invoices.map((invoice, idx) => (
+                        {rows.map((row, idx) => (
                             <TableRow key={idx}>
-                                <TableCell className="font-medium">{invoice.service}</TableCell>
-                                <TableCell>{invoice.seat}{invoice.shift}</TableCell>
-                                <TableCell>{invoice.rate} / day</TableCell>
-                                <TableCell className="text-right">{invoice.subtotal}</TableCell>
+                                <TableCell className="font-medium">{row.service}</TableCell>
+                                <TableCell>{row.seat} — {row.shift}</TableCell>
+                                <TableCell>${row.rate} / day</TableCell>
+                                <TableCell className="text-right">${row.subtotal.toFixed(2)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
-                    {/* <TableFooter>
-                        <TableRow className='border-0 hover:shadow-none'>
-                            <TableCell colSpan={3} className="text-right py-2">Subtotal</TableCell>
-                            <TableCell className="text-right py-2 ">$3,840.00</TableCell>
-                        </TableRow>
-                        <TableRow className='border-0 hover:shadow-none'>
-                            <TableCell colSpan={3} className="text-right py-2">Tax</TableCell>
-                            <TableCell className="text-right py-2 ">$0.00</TableCell>
-                        </TableRow>
-                        <TableRow className='hover:shadow-none'>
-                            <TableCell colSpan={3} className="text-right text-lg">Total Due</TableCell>
-                            <TableCell className="text-right text-lg">$3,840.00</TableCell>
-                        </TableRow>
-                    </TableFooter> */}
                 </Table>
                 <div className='flex justify-end p-4 bg-primary-alpha-10'>
                     <div className='w-full md:w-64 space-y-3'>
                         <div className='flex justify-between'>
                             <p>Subtotal</p>
-                            <p className='text-text-strong-950 font-medium'>$3,840.00</p>
+                            <p className='text-text-strong-950 font-medium'>${subtotal.toFixed(2)}</p>
                         </div>
                         <div className='flex justify-between'>
                             <p>Tax</p>
@@ -112,7 +69,7 @@ const ReviewOrder: React.FC = () => {
                         </div>
                         <div className='flex justify-between pt-4 border-t border-stroke-sub-300'>
                             <p className='text-text-strong-950 text-lg font-medium'>Total</p>
-                            <p className='text-text-strong-950 text-lg font-medium'>$3,840.00</p>
+                            <p className='text-text-strong-950 text-lg font-medium'>${subtotal.toFixed(2)}</p>
                         </div>
                     </div>
                 </div>
