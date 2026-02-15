@@ -10,12 +10,13 @@ import SignupPage from './pages/auth/signup.page'
 import ResetPasswordPage from './pages/auth/resetPassword.page'
 import NewPasswordPage from './pages/auth/newPassword.page'
 import OrderWizardLayout from './layouts/order.layout'
-import TeamPage from './pages/order.tsx/wizard/team.page'
-import SeatPage from './pages/order.tsx/wizard/seat.page'
-import ReviewOrderPage from './pages/order.tsx/wizard/review.page'
-import AgreementPage from './pages/order.tsx/wizard/agreement.page'
-import CheckoutPage from './pages/order.tsx/wizard/checkout.page'
+import TeamPage from './pages/order/wizard/team.page'
+import SeatPage from './pages/order/wizard/seat.page'
+import ReviewOrderPage from './pages/order/wizard/review.page'
+import AgreementPage from './pages/order/wizard/agreement.page'
+import CheckoutPage from './pages/order/wizard/checkout.page'
 import { ThemeProvider } from './styles/theme-provider'
+import PlanPage from './pages/order/wizard/plan.page'
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route path="/new-password" element={<NewPasswordPage />} />
           </Route>
           <Route element={<OrderWizardLayout />}>
+            <Route path="/plan" element={<PlanPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/seat" element={<SeatPage />} />
             <Route path="/review" element={<ReviewOrderPage />} />
