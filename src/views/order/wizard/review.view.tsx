@@ -1,29 +1,26 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/atomic/table'
 import React from 'react'
 import { useSelector } from 'react-redux'
-import { selectWizardCategories, selectWizardShiftAssignments, selectWizardSeatAssignments, selectWizardSelected } from '@/store/wizard/wizard.selector'
-
-const shiftLabels: Record<string, string> = {
-  morning: '09:00 AM - 05:00 PM (PST)',
-  evening: '01:00 PM - 09:00 PM (PST)',
-  night: '09:00 PM - 05:00 AM (PST)'
-}
+import { selectWizardCategories, selectWizardShiftAssignments, selectWizardSeatAssignments, selectWizardSelected, selectWizardShifts } from '@/store/wizard/wizard.selector'
 
 const ReviewOrder: React.FC = () => {
     const categories = useSelector(selectWizardCategories)
     const selected = useSelector(selectWizardSelected)
     const shiftAssignments = useSelector(selectWizardShiftAssignments)
     const shiftSeatAssignments = useSelector(selectWizardSeatAssignments)
+    const shifts = useSelector(selectWizardShifts) ?? []
 
     // build invoice rows from seat assignments across shifts
     const rows: Array<{ service: string; seat: string; shift: string; rate: number; subtotal: number }> = []
 
-    Object.entries(shiftSeatAssignments).forEach(([shift, seats]) => {
+    Object.entries(shiftSeatAssignments).forEach(([shiftKey, seats]) => {
+      const shift = shifts.find((s: any) => s.key === shiftKey)
+      const label = shift ? `${shift.start} - ${shift.end} (PST)` : shiftKey
       Object.entries(seats).forEach(([seatId, categoryId]) => {
         const cat = categories.find((c) => String(c.id) === String(categoryId))
         if (!cat) return
         const rate = Number(cat.price ?? 0)
-        rows.push({ service: cat.title, seat: seatId, shift: shiftLabels[shift] ?? shift, rate, subtotal: rate })
+        rows.push({ service: cat.title, seat: seatId, shift: label, rate, subtotal: rate })
       })
     })
 

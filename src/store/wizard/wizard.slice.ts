@@ -19,8 +19,10 @@ type SelectionItem = {
 type WizardState = {
   categories: WizardCategory[];
   selected: SelectionItem[];
+  shifts: { key: string; title: string; start?: string; end?: string }[];
   shiftAssignments: Record<string, Array<number | string>>;
   shiftSeatAssignments: Record<string, Record<string, number>>;
+  agreement: { signed: boolean; signer?: { fullName?: string; email?: string; company?: string; date?: string } };
   currentStep: number;
   isLoading: boolean;
   error: string | null;
@@ -31,6 +33,12 @@ const initialState: WizardState = {
   selected: [],
   shiftAssignments: { morning: [], evening: [], night: [] },
   shiftSeatAssignments: { morning: {}, evening: {}, night: {} },
+  shifts: [
+    { key: 'morning', title: 'Morning', start: '09:00', end: '17:00' },
+    { key: 'evening', title: 'Evening', start: '13:00', end: '21:00' },
+    { key: 'night', title: 'Night', start: '21:00', end: '05:00' },
+  ],
+  agreement: { signed: false },
   currentStep: 0,
   isLoading: false,
   error: null,
@@ -46,6 +54,16 @@ export const fetchWizardCategories = createAsyncThunk<WizardCategory[]>('wizard/
 
   await new Promise((r) => setTimeout(r, 200));
   return data;
+});
+
+export const fetchWizardShifts = createAsyncThunk('wizard/fetchShifts', async () => {
+  // simulate fetching shifts from an API
+  await new Promise((r) => setTimeout(r, 150));
+  return [
+    { key: 'morning', title: 'Morning', start: '09:00', end: '17:00' },
+    { key: 'evening', title: 'Evening', start: '13:00', end: '21:00' },
+    { key: 'night', title: 'Night', start: '21:00', end: '05:00' },
+  ];
 });
 
 const wizardSlice = createSlice({
@@ -121,6 +139,9 @@ const wizardSlice = createSlice({
     clearSelection: (state) => {
       state.selected = [];
     },
+    setAgreement: (state, action: PayloadAction<{ signed: boolean; signer?: { fullName?: string; email?: string; company?: string; date?: string } }>) => {
+      state.agreement = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -136,8 +157,15 @@ const wizardSlice = createSlice({
         state.isLoading = false;
         state.error = action.error?.message ?? 'Failed to load categories';
       });
+    builder
+      .addCase(fetchWizardShifts.fulfilled, (state, action) => {
+        state.shifts = action.payload as any;
+      })
+      .addCase(fetchWizardShifts.rejected, (state) => {
+        // keep defaults on error
+      });
   },
 });
 
-export const { addSelection, removeSelection, setQty, setStep, clearSelection, addShiftAssignment, removeShiftAssignment, setSeatAssignment, removeSeatAssignment } = wizardSlice.actions;
+export const { addSelection, removeSelection, setQty, setStep, clearSelection, addShiftAssignment, removeShiftAssignment, setSeatAssignment, removeSeatAssignment, setAgreement } = wizardSlice.actions;
 export default wizardSlice.reducer;

@@ -5,7 +5,7 @@ import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader,
 import { Input } from "@/components/atomic/input";
 import { Minus, Plus } from "lucide-react";
 import React from 'react';
-import useCategoryItem from '@/hooks/wizard/category.hook';
+import useWizard from '@/hooks/wizard/wizard.hook';
 
 type Category = {
     id?: string | number;
@@ -17,8 +17,31 @@ type Category = {
     qty?: number | string;
 }
 
-const CategoryCard: React.FC<Category & { onAdd?: (id: number | string, qty?: number) => void }> = ({ title = 'Role', description = '', price = '', unit = '/ day', badges = [], qty = 0, id, onAdd }) => {
-    const { count, inc, dec, onChange: handleChange, handleAdd } = useCategoryItem({ id, initialQty: qty, onAdd });
+const CategoryCard: React.FC<Category & { onAdd?: (id: number | string, qty?: number) => void }> = ({ title = 'Role', description = '', price = '', unit = '/ day', badges = [], qty = 0, id }) => {
+    const { selected, add, updateQty, remove } = useWizard();
+
+    const sel = selected.find((s) => String(s.categoryId) === String(id));
+    const count = sel ? Number(sel.qty) : Number(qty || 0);
+
+    const inc = () => {
+        if (sel) updateQty(id as any, count + 1);
+        else add(id as any, 1);
+    };
+    const dec = () => {
+        if (!sel) return;
+        if (count <= 1) remove(id as any);
+        else updateQty(id as any, count - 1);
+    };
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = Number(e.target.value);
+        if (!Number.isFinite(v) || v <= 0) {
+            // remove if exists
+            if (sel) remove(id as any);
+            return;
+        }
+        if (sel) updateQty(id as any, Math.max(0, v));
+        else add(id as any, Math.max(0, v));
+    };
 
     return (
         <Card className="w-full gap-6">
@@ -37,13 +60,12 @@ const CategoryCard: React.FC<Category & { onAdd?: (id: number | string, qty?: nu
                     <Badge key={b} variant="secondary">{b}</Badge>
                 ))}
             </CardContent>
-                <CardFooter className="flex justify-between items-center gap-4">
+            <CardFooter className="flex justify-between items-center gap-4">
                 <ButtonGroup className="border border-primary-alpha-16 rounded-md overflow-hidden">
                     <Button variant="tertiary" className="h-9" onClick={inc}><Plus /></Button>
                     <Input className="md:h-9 w-10 text-lg! text-center border-0 bg-primary-alpha-10" value={String(count)} onChange={handleChange} />
                     <Button variant="tertiary" className="h-9" onClick={dec}><Minus /></Button>
                 </ButtonGroup>
-                <Button className="flex-1" onClick={handleAdd}>Add to List</Button>
             </CardFooter>
         </Card>
     )

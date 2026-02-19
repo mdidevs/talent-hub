@@ -1,6 +1,5 @@
 import { Button } from '@/components/atomic/button';
 import { Logo } from '@/components/atomic/logo';
-import ErrorStatus from '@/components/molecule/order/wizard/errorStatus';
 import ProgressBar from '@/components/molecule/order/wizard/team/progressBar';
 import { ArrowLeft, ArrowRight, X, LogOut } from 'lucide-react';
 import { useDispatch } from 'react-redux';

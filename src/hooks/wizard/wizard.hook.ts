@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@/store/store';
-import { fetchWizardCategories, addSelection, removeSelection, setQty, setStep, clearSelection } from '@/store/wizard/wizard.slice';
+import { fetchWizardCategories, fetchWizardShifts, addSelection, removeSelection, setQty, setStep, clearSelection } from '@/store/wizard/wizard.slice';
 import { selectWizardCategories, selectWizardSelected, selectWizardStep, selectWizardLoading, selectWizardError } from '@/store/wizard/wizard.selector';
 
 export const useWizard = () => {
@@ -23,6 +23,8 @@ export const useWizard = () => {
 
   useEffect(() => {
     if (!categories || categories.length === 0) load();
+    // also ensure shifts metadata is loaded
+    dispatch(fetchWizardShifts());
   }, [categories, load]);
 
   return { categories, selected, step, isLoading, error, load, add, remove, updateQty, goTo, next, prev, clear } as const;
