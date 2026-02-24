@@ -21,13 +21,13 @@ const ShifrShedulerCard: React.FC<{
   const categories = useSelector(selectWizardCategories);
   const selected = useSelector(selectWizardSelected);
 
-  const derivedRoles = selected
-    .map((s) => {
-      const cat = categories.find((c) => String(c.id) === String(s.categoryId));
-      if (!cat) return null;
-      return { id: s.categoryId, title: cat.title, qty: s.qty } as const;
-    })
-    .filter(Boolean) as Array<{ id: number | string; title: string; qty: number }>;
+        const derivedRoles = selected
+        .map((s) => {
+            const cat = categories.find((c) => String(c.id) === String(s.categoryId));
+            if (!cat) return null;
+            return { id: s.categoryId, title: cat.title, qty: s.qty, instanceId: (s as any).instanceId } as const;
+        })
+        .filter(Boolean) as Array<{ id: number | string; title: string; qty: number; instanceId: string }>;
 
     const shiftAssignments = useSelector(selectWizardShiftAssignments);
 
@@ -51,25 +51,30 @@ const ShifrShedulerCard: React.FC<{
                 </SelectTrigger>
                 <SelectContent position="popper">
                     <SelectGroup>
-                        {derivedRoles.map((r) => {
-                            const assignedElsewhere = Object.entries(shiftAssignments).some(([s, ids]) => s !== shiftKey && ids.find((id) => String(id) === String(r.id)));
-                            return (
-                                <SelectItem key={String(r.id)} value={String(r.id)} disabled={assignedElsewhere}>
-                                    {r.title} ({r.qty} selected){assignedElsewhere ? ' — assigned' : ''}
-                                </SelectItem>
-                            )
-                        })}
+                                {derivedRoles.map((r) => {
+                                    const composite = `${r.id}:${r.instanceId}`;
+                                    // disable if this instance is already assigned in any shift
+                                    const assignedAnywhere = Object.entries(shiftAssignments || {}).some(([, ids]) =>
+                                        (ids || []).some((id) => String(id) === composite)
+                                    );
+                                    return (
+                                        <SelectItem key={`${String(r.id)}-${r.instanceId}`} value={composite} disabled={assignedAnywhere}>
+                                            {r.title} {`(#${r.instanceId})`}{assignedAnywhere ? ' — assigned' : ''}
+                                        </SelectItem>
+                                    )
+                                })}
                     </SelectGroup>
                 </SelectContent>
             </Select>
         </CardContent>
         <CardFooter className="-mt-2 flex-wrap gap-1">
-            {assigned.map((roleId) => {
-                const role = derivedRoles.find((r) => String(r.id) === String(roleId));
+            {assigned.map((roleKey) => {
+                const [catId, instanceId] = String(roleKey).split(':');
+                const role = derivedRoles.find((r) => String(r.id) === String(catId) && r.instanceId === instanceId);
                 return (
-                    <Badge key={String(roleId)} variant="ghost" className="p-0 pl-2 gap-x-1 bg-background-soft-200 rounded-md overflow-hidden">
+                    <Badge key={String(roleKey)} variant="ghost" className="p-0 pl-2 gap-x-1 bg-background-soft-200 rounded-md overflow-hidden">
                         <p className="max-w-20 text-xs font-medium truncate">{role?.title ?? 'Unknown'}</p>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 rounded-none" onClick={() => onRemove?.(shiftKey, roleId)}>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 rounded-none" onClick={() => onRemove?.(shiftKey, roleKey)}>
                             <X/>
                         </Button>
                     </Badge>

@@ -1,21 +1,26 @@
 import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@/store/store';
-import { fetchWizardCategories, fetchWizardShifts, addSelection, removeSelection, setQty, setStep, clearSelection } from '@/store/wizard/wizard.slice';
-import { selectWizardCategories, selectWizardSelected, selectWizardStep, selectWizardLoading, selectWizardError } from '@/store/wizard/wizard.selector';
+import { fetchWizardCategories, fetchWizardShifts, addSelection, removeSelection, setQty, setStep, clearSelection, setPlan, setCreditLimit } from '@/store/wizard/wizard.slice';
+import { selectWizardCategories, selectWizardSelected, selectWizardStep, selectWizardLoading, selectWizardError, selectWizardPlan, selectWizardCreditLimit } from '@/store/wizard/wizard.selector';
 
 export const useWizard = () => {
   const dispatch = useDispatch<AppDispatch>();
   const categories = useSelector((s: RootState) => selectWizardCategories(s));
   const selected = useSelector((s: RootState) => selectWizardSelected(s));
   const step = useSelector((s: RootState) => selectWizardStep(s));
+  const plan = useSelector((s: RootState) => selectWizardPlan(s));
+  const creditLimit = useSelector((s: RootState) => selectWizardCreditLimit(s));
   const isLoading = useSelector((s: RootState) => selectWizardLoading(s));
   const error = useSelector((s: RootState) => selectWizardError(s));
 
   const load = useCallback(() => dispatch(fetchWizardCategories()), [dispatch]);
   const add = useCallback((categoryId: number | string, qty = 1) => dispatch(addSelection({ categoryId, qty })), [dispatch]);
-  const remove = useCallback((categoryId: number | string) => dispatch(removeSelection({ categoryId })), [dispatch]);
-  const updateQty = useCallback((categoryId: number | string, qty: number) => dispatch(setQty({ categoryId, qty })), [dispatch]);
+  const remove = useCallback((instanceId: string) => dispatch(removeSelection({ instanceId })), [dispatch]);
+  const updateQty = useCallback((instanceId: string, qty: number, categoryId?: number | string) => dispatch(setQty({ instanceId, qty, categoryId } as any)), [dispatch]);
+  const choosePlan = useCallback((p: string) => dispatch(setPlan(p)), [dispatch]);
+  const setCredit = useCallback((amount: number) => dispatch(setCreditLimit(amount)), [dispatch]);
+  
   const goTo = useCallback((n: number) => dispatch(setStep(n)), [dispatch]);
   const next = useCallback(() => dispatch(setStep(step + 1)), [dispatch, step]);
   const prev = useCallback(() => dispatch(setStep(Math.max(0, step - 1))), [dispatch, step]);
@@ -27,7 +32,7 @@ export const useWizard = () => {
     dispatch(fetchWizardShifts());
   }, [categories, load]);
 
-  return { categories, selected, step, isLoading, error, load, add, remove, updateQty, goTo, next, prev, clear } as const;
+  return { categories, selected, step, plan, creditLimit, isLoading, error, load, add, remove, updateQty, choosePlan, setCredit, goTo, next, prev, clear } as const;
 };
 
 export default useWizard;

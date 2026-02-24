@@ -19,12 +19,12 @@ export const TeamForm = () => {
     const dispatch = useDispatch();
     const shiftAssignments = useSelector(selectWizardShiftAssignments);
 
-    const handleAssign = (shift: string, roleId: number | string) => {
-        dispatch(addShiftAssignment({ shift, categoryId: roleId }));
+    const handleAssign = (shift: string, roleKey: number | string) => {
+        dispatch(addShiftAssignment({ shift, categoryId: roleKey }));
     }
 
-    const handleRemove = (shift: string, roleId: number | string) => {
-        dispatch(removeShiftAssignment({ shift, categoryId: roleId }));
+    const handleRemove = (shift: string, roleKey: number | string) => {
+        dispatch(removeShiftAssignment({ shift, categoryId: roleKey }));
     }
 
     return (

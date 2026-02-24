@@ -16,26 +16,34 @@ type Category = {
 
 const CategoryList: React.FC<Category & { onAdd?: (id: number | string, qty?: number) => void }> = ({ title = 'Role', description = '', price = '', unit = '/ day', qty = 0, id }) => {
     const { selected, add, updateQty, remove } = useWizard();
-    const sel = selected.find((s) => String(s.categoryId) === String(id));
-    const count = sel ? Number(sel.qty) : Number(qty || 0);
+    const totalForCategory = selected.reduce((sum, s) => String(s.categoryId) === String(id) ? sum + (s.qty || 0) : sum, 0);
+    const count = Number(totalForCategory || qty || 0);
 
     const inc = () => {
-        if (sel) updateQty(id as any, count + 1);
-        else add(id as any, 1);
+        add(id as any, 1);
     };
     const dec = () => {
-        if (!sel) return;
-        if (count <= 1) remove(id as any);
-        else updateQty(id as any, count - 1);
+        remove(id as any);
     };
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const v = Number(e.target.value);
+        const v = Number(e.target.value || 0);
         if (!Number.isFinite(v) || v <= 0) {
-            if (sel) remove(id as any);
+            // remove all occurrences
+            let remaining = selected.reduce((sum, s) => String(s.categoryId) === String(id) ? sum + (s.qty || 0) : sum, 0);
+            while (remaining > 0) {
+                remove(id as any);
+                remaining -= 1;
+            }
             return;
         }
-        if (sel) updateQty(id as any, Math.max(0, v));
-        else add(id as any, Math.max(0, v));
+
+        const current = selected.reduce((sum, s) => String(s.categoryId) === String(id) ? sum + (s.qty || 0) : sum, 0);
+        const diff = v - current;
+        if (diff > 0) {
+            for (let i = 0; i < diff; i++) add(id as any, 1);
+        } else if (diff < 0) {
+            for (let i = 0; i < Math.abs(diff); i++) remove(id as any);
+        }
     };
 
     return (

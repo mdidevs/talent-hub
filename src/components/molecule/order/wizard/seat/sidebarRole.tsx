@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
 import { Badge } from "@/components/atomic/badge";
-import { useSelector } from 'react-redux';
-import { selectWizardCategories, selectWizardSelected } from '@/store/wizard/wizard.selector';
+import { useSelector } from "react-redux";
+import { selectWizardCategories, selectWizardSelected } from "@/store/wizard/wizard.selector";
 
 export default function SidebarRoles({
   selectedRole,
@@ -10,10 +10,10 @@ export default function SidebarRoles({
   seatAssignments,
   allowedRoleIds,
 }: {
-  selectedRole: number | null
-  onSelectRole: (id: number) => void
-  seatAssignments: Record<string, number>
-  allowedRoleIds?: Array<number | string>
+  selectedRole: { id: number | string; instanceId: string } | null;
+  onSelectRole: (id: number | string, instanceId: string) => void;
+  seatAssignments: Record<string, string>;
+  allowedRoleIds?: Array<number | string>;
 }) {
   const categories = useSelector(selectWizardCategories);
   const selected = useSelector(selectWizardSelected);
@@ -26,67 +26,70 @@ export default function SidebarRoles({
       return {
         id: s.categoryId,
         title: cat.title,
-        organization: cat.description ?? 'NOC Professionals',
+        organization: cat.description ?? "NOC Professionals",
         qty: s.qty,
-      } as { id: number | string; title: string; organization: string; qty: number } | null;
+        instanceId: (s as any).instanceId,
+      } as { id: number | string; title: string; organization: string; qty: number; instanceId: string } | null;
     })
-    .filter(Boolean) as Array<{ id: number | string; title: string; organization: string; qty: number }>;
+    .filter(Boolean) as Array<{ id: number | string; title: string; organization: string; qty: number; instanceId: string }>;
 
   if (Array.isArray(allowedRoleIds)) {
     const allowedSet = new Set(allowedRoleIds.map(String));
-    derivedRoles = derivedRoles.filter((r) => allowedSet.has(String(r.id)));
+    derivedRoles = derivedRoles.filter((r) => allowedSet.has(`${r.id}:${r.instanceId}`) || allowedSet.has(String(r.id)));
   }
+  const getAssignedSeatForInstance = (roleId: number | string, instanceId: string): string | undefined => {
+    const found = Object.entries(seatAssignments)
+      .map(([seatId, assigned]) => ({ seatId, assigned: String(assigned) }))
+      .map(({ seatId, assigned }) => {
+        if (assigned.includes(':')) {
+          const [cid, inst] = assigned.split(':');
+          return { seatId, cid, inst };
+        }
+        return { seatId, cid: assigned, inst: '0' };
+      })
+      .find(({ cid, inst }) => String(cid) === String(roleId) && String(inst) === String(instanceId));
 
-  // Calculate seats for each role from seatAssignments
-  const getAssignedSeats = (roleId: number | string): string[] => {
-    return Object.entries(seatAssignments)
-      .filter(([_, assignedRole]) => String(assignedRole) === String(roleId))
-      .map(([seatId]) => seatId);
-  }
+    if (!found) return undefined;
+    // seatId may be prefixed with floor like 'first-floor:A-3' -> display short 'A-3'
+    if (String(found.seatId).includes(':')) return String(found.seatId).split(':')[1];
+    return found.seatId;
+  };
 
-  const getStatus = (roleId: number | string): 'assigned' | 'unassigned' => {
-    return getAssignedSeats(roleId).length > 0 ? 'assigned' : 'unassigned'
-  }
+  const getStatus = (roleId: number | string, instanceId: string): "assigned" | "unassigned" => {
+    const seat = getAssignedSeatForInstance(roleId, instanceId);
+    return seat ? 'assigned' : 'unassigned';
+  };
 
   return (
     <>
       <div className="space-y-3">
-        {derivedRoles.length === 0 && (
-          <div className="text-sm text-text-sub-600">No professionals added yet.</div>
-        )}
+        {derivedRoles.length === 0 && <div className="text-sm text-text-sub-600">No professionals added yet.</div>}
+
         {derivedRoles.map((role) => {
-          const assignedSeats = getAssignedSeats(role.id)
-          const seatDisplay = assignedSeats.length > 0 ? assignedSeats[0] : 'Unassigned'
-          const status = getStatus(role.id)
+          const seatDisplay = getAssignedSeatForInstance(role.id, role.instanceId) ?? 'Unassigned';
+          const status = getStatus(role.id, role.instanceId);
 
           return (
             <div
-              key={String(role.id)}
-              onClick={() => onSelectRole(Number(role.id))}
+              key={`${String(role.id)}-${role.instanceId}`}
+              onClick={() => onSelectRole(role.id, role.instanceId)}
               className={`cursor-pointer rounded-md px-3 py-2 transition-all ${
-                selectedRole === role.id
-                  ? 'border border-primary-base bg-primary-alpha-10'
-                  : 'border border-stroke-soft-200 bg-background-week-50 hover:bg-primary-alpha-10'
-              }`}
-            >
+                selectedRole && String(selectedRole.id) === String(role.id) && selectedRole.instanceId === role.instanceId
+                  ? "border border-primary-base bg-primary-alpha-10"
+                  : "border border-stroke-soft-200 bg-background-week-50 hover:bg-primary-alpha-10"
+              }`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <h3 className="text-sm font-medium">{role.title}</h3>
                   <p className="text-xs text-text-sub-600">{role.organization}</p>
                   <p className="text-xs text-text-sub-500 mt-1">Qty: {role.qty}</p>
                 </div>
-                <Badge variant={status === 'assigned'? 'success' : 'warning'}>
-                  {seatDisplay}
-                </Badge>
+                <Badge variant={status === "assigned" ? "success" : "warning"}>{seatDisplay}</Badge>
               </div>
             </div>
-          )
+          );
         })}
       </div>
-
-      <div className="mt-8 text-sm text-gray-600">
-        Remaining : {/* could compute remaining seats here if needed */}
-      </div>
     </>
-  )
+  );
 }

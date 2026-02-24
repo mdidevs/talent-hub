@@ -13,16 +13,17 @@ const ReviewOrder: React.FC = () => {
     // build invoice rows from seat assignments across shifts
     const rows: Array<{ service: string; seat: string; shift: string; rate: number; subtotal: number }> = []
 
-    Object.entries(shiftSeatAssignments).forEach(([shiftKey, seats]) => {
-      const shift = shifts.find((s: any) => s.key === shiftKey)
-      const label = shift ? `${shift.start} - ${shift.end} (PST)` : shiftKey
-      Object.entries(seats).forEach(([seatId, categoryId]) => {
-        const cat = categories.find((c) => String(c.id) === String(categoryId))
-        if (!cat) return
-        const rate = Number(cat.price ?? 0)
-        rows.push({ service: cat.title, seat: seatId, shift: label, rate, subtotal: rate })
-      })
-    })
+        Object.entries(shiftSeatAssignments).forEach(([shiftKey, seats]) => {
+            const shift = shifts.find((s: any) => s.key === shiftKey)
+            const label = shift ? `${shift.start} - ${shift.end} (PST)` : shiftKey
+            Object.entries(seats).forEach(([seatId, categoryKey]) => {
+                const catId = String(categoryKey).split(':')[0];
+                const cat = categories.find((c) => String(c.id) === String(catId))
+                if (!cat) return
+                const rate = Number(cat.price ?? 0)
+                rows.push({ service: cat.title, seat: seatId, shift: label, rate, subtotal: rate })
+            })
+        })
 
     const subtotal = rows.reduce((s, r) => s + r.subtotal, 0)
 

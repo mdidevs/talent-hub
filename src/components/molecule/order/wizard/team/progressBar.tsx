@@ -1,13 +1,21 @@
 
 import React from 'react';
 import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { selectWizardStep } from '@/store/wizard/wizard.selector';
 
-const TOTAL_STEPS = 5;
+const routesOrder = ['/plan', '/team', '/seat', '/review', '/agreement', '/checkout'];
+const TOTAL_STEPS = routesOrder.length;
 
 const ProgressBar = () => {
   const step = useSelector(selectWizardStep);
-  const percent = Math.max(0, Math.min(100, Math.round(((step + 1) / TOTAL_STEPS) * 100)));
+  const location = useLocation();
+  const idx = Math.max(0, routesOrder.indexOf(location.pathname));
+
+  const percent = (() => {
+    if (idx >= 0) return Math.max(0, Math.min(100, Math.round(((idx + 1) / TOTAL_STEPS) * 100)));
+    return Math.max(0, Math.min(100, Math.round(((step + 1) / TOTAL_STEPS) * 100)));
+  })();
 
   return (
     <div className="w-full h-1 bg-primary-alpha-10 overflow-hidden">

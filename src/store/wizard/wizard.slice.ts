@@ -14,14 +14,17 @@ export type WizardCategory = {
 type SelectionItem = {
   categoryId: number | string;
   qty: number;
+  instanceId: string;
 };
 
 type WizardState = {
   categories: WizardCategory[];
   selected: SelectionItem[];
+  plan?: string;
+  creditLimit?: number;
   shifts: { key: string; title: string; start?: string; end?: string }[];
   shiftAssignments: Record<string, Array<number | string>>;
-  shiftSeatAssignments: Record<string, Record<string, number>>;
+  shiftSeatAssignments: Record<string, Record<string, string>>;
   agreement: { signed: boolean; signer?: { fullName?: string; email?: string; company?: string; date?: string } };
   currentStep: number;
   isLoading: boolean;
@@ -39,6 +42,8 @@ const initialState: WizardState = {
     { key: 'night', title: 'Night', start: '21:00', end: '05:00' },
   ],
   agreement: { signed: false },
+  plan: 'pro',
+  creditLimit: 0,
   currentStep: 0,
   isLoading: false,
   error: null,
@@ -72,21 +77,47 @@ const wizardSlice = createSlice({
   reducers: {
     addSelection: (state, action: PayloadAction<{ categoryId: number | string; qty?: number }>) => {
       const { categoryId, qty = 1 } = action.payload;
-      const existing = state.selected.find((s) => s.categoryId === categoryId);
-      if (existing) {
-        // replace stored qty with the provided qty (keep sane, predictable value)
-        existing.qty = qty;
-      } else {
-        state.selected.push({ categoryId, qty });
+      // determine effective credit limit: explicit creditLimit >0 wins, otherwise plan defaults
+      const planLimit = (state.creditLimit && state.creditLimit > 0)
+        ? state.creditLimit
+        : state.plan === 'pro'
+          ? 200
+          : state.plan === 'premium'
+            ? 150
+            : undefined;
+
+      // build prospective selection set: push a new record for this add
+      const prospective = [...state.selected.map((s) => ({ ...s })), { categoryId, qty }];
+
+      // compute subtotal for prospective selections
+      const subtotal = prospective.reduce((sum, s) => {
+        const cat = state.categories.find((c) => String(c.id) === String(s.categoryId));
+        const price = cat ? Number(cat.price ?? 0) : 0;
+        return sum + price * (s.qty || 0);
+      }, 0);
+
+      if (planLimit !== undefined && subtotal > planLimit) {
+        state.error = 'Credit limit exceeded';
+        return;
       }
+
+      state.error = null;
+      // push a new selection entry (do not merge with existing)
+      // generate a stable instanceId for this selection
+      const instanceId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      state.selected.push({ categoryId, qty, instanceId });
     },
     addShiftAssignment: (state, action: PayloadAction<{ shift: string; categoryId: number | string }>) => {
       const { shift, categoryId } = action.payload;
-      // remove from any other shift first
-      Object.keys(state.shiftAssignments).forEach((s) => {
-        if (s === shift) return;
-        state.shiftAssignments[s] = state.shiftAssignments[s].filter((id) => String(id) !== String(categoryId));
-      });
+      // If categoryId is a composite instance key (contains ':'), allow it to exist in multiple shifts.
+      const isCompositeInstance = String(categoryId).includes(':');
+      if (!isCompositeInstance) {
+        // remove from any other shift first (only for plain category ids)
+        Object.keys(state.shiftAssignments).forEach((s) => {
+          if (s === shift) return;
+          state.shiftAssignments[s] = state.shiftAssignments[s].filter((id) => String(id) !== String(categoryId));
+        });
+      }
       const arr = state.shiftAssignments[shift] ?? [];
       if (!arr.find((id) => String(id) === String(categoryId))) {
         state.shiftAssignments[shift] = [...arr, categoryId];
@@ -103,15 +134,8 @@ const wizardSlice = createSlice({
         return;
       }
 
-      // remove any existing seat assigned to this category within the shift
-      Object.entries(map).forEach(([sId, cId]) => {
-        if (String(cId) === String(categoryId)) {
-          delete map[sId];
-        }
-      });
-
-      // assign
-      map[seatId] = Number(categoryId as any);
+      // assign: store composite identifier (categoryId:instanceId) as string so each instance maps uniquely
+      map[seatId] = String(categoryId as any);
       state.shiftSeatAssignments[shift] = { ...map };
     },
     removeSeatAssignment: (state, action: PayloadAction<{ shift: string; seatId: string }>) => {
@@ -126,12 +150,51 @@ const wizardSlice = createSlice({
       const { shift, categoryId } = action.payload;
       state.shiftAssignments[shift] = (state.shiftAssignments[shift] ?? []).filter((id) => String(id) !== String(categoryId));
     },
-    removeSelection: (state, action: PayloadAction<{ categoryId: number | string }>) => {
-      state.selected = state.selected.filter((s) => s.categoryId !== action.payload.categoryId);
+    removeSelection: (state, action: PayloadAction<{ instanceId: string }>) => {
+      // remove a single occurrence by instanceId
+      const idx = state.selected.findIndex((s) => String(s.instanceId) === String(action.payload.instanceId));
+      if (idx >= 0) state.selected.splice(idx, 1);
     },
-    setQty: (state, action: PayloadAction<{ categoryId: number | string; qty: number }>) => {
-      const item = state.selected.find((s) => s.categoryId === action.payload.categoryId);
-      if (item) item.qty = action.payload.qty;
+    setQty: (state, action: PayloadAction<{ instanceId: string; qty: number; categoryId?: number | string }>) => {
+      const { instanceId, qty, categoryId } = action.payload;
+      const planLimit = (state.creditLimit && state.creditLimit > 0)
+        ? state.creditLimit
+        : state.plan === 'pro'
+          ? 200
+          : state.plan === 'premium'
+            ? 150
+            : undefined;
+
+      const prospective = state.selected.map((s) => ({ ...s }));
+      const idx = prospective.findIndex((s) => String(s.instanceId) === String(instanceId));
+      if (idx >= 0) prospective[idx].qty = qty;
+      else {
+        // fallback: if instanceId not found, try to preserve behavior by updating first matching category
+        const idxByCat = categoryId !== undefined ? prospective.findIndex((s) => String(s.categoryId) === String(categoryId)) : -1;
+        if (idxByCat >= 0) prospective[idxByCat].qty = qty;
+        else prospective.push({ categoryId: categoryId ?? '', qty, instanceId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` as string });
+      }
+
+      const subtotal = prospective.reduce((sum, s) => {
+        const cat = state.categories.find((c) => String(c.id) === String(s.categoryId));
+        const price = cat ? Number(cat.price ?? 0) : 0;
+        return sum + price * (s.qty || 0);
+      }, 0);
+
+      if (planLimit !== undefined && subtotal > planLimit) {
+        state.error = 'Credit limit exceeded';
+        return;
+      }
+
+      state.error = null;
+      const item = state.selected.find((s) => String(s.instanceId) === String(instanceId) || (categoryId !== undefined && s.categoryId === categoryId));
+      if (item) item.qty = qty as any;
+    },
+    setPlan: (state, action: PayloadAction<string>) => {
+      state.plan = action.payload;
+    },
+    setCreditLimit: (state, action: PayloadAction<number>) => {
+      state.creditLimit = action.payload;
     },
     setStep: (state, action: PayloadAction<number>) => {
       state.currentStep = action.payload;
@@ -167,5 +230,5 @@ const wizardSlice = createSlice({
   },
 });
 
-export const { addSelection, removeSelection, setQty, setStep, clearSelection, addShiftAssignment, removeShiftAssignment, setSeatAssignment, removeSeatAssignment, setAgreement } = wizardSlice.actions;
+export const { addSelection, removeSelection, setQty, setStep, clearSelection, addShiftAssignment, removeShiftAssignment, setSeatAssignment, removeSeatAssignment, setAgreement, setPlan, setCreditLimit } = wizardSlice.actions;
 export default wizardSlice.reducer;

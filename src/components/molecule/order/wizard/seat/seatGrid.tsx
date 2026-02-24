@@ -17,50 +17,57 @@ export default function SeatGrid({
   selectedRole,
   seatAssignments,
   onSeatClick,
+  selectedFloor,
 }: {
-  selectedRole: number | null
-  seatAssignments: Record<string, number>
+  selectedRole: { id: number | string; instanceId: string } | null
+  seatAssignments: Record<string, string>
   onSeatClick: (seatId: string) => void
+  selectedFloor?: string
 }) {
-  const seats = generateSeats()
+  const seats = generateSeatsForFloor(selectedFloor)
 
-  // Group seats into rows (8 columns per row)
+  // Group seats into rows (7 columns per row)
   const rows: Seat[][] = []
-  for (let i = 0; i < seats.length; i += 8) {
-    rows.push(seats.slice(i, i + 8))
+  const cols = 7
+  for (let i = 0; i < seats.length; i += cols) {
+    rows.push(seats.slice(i, i + cols))
   }
+
+  // derive assigned seat id for the selected instance (if any)
+  const selectedInstanceSeat = (() => {
+    if (!selectedRole) return undefined
+    const assigned = Object.entries(seatAssignments)
+      .map(([seatId, assigned]) => ({ seatId, assigned: String(assigned) }))
+      .filter((e) => e.assigned === `${String(selectedRole.id)}:${selectedRole.instanceId}`)
+      .map((e) => e.seatId)
+    return assigned[0]
+  })()
 
   const getSeatStyle = (seatId: string) => {
     const assignedRole = seatAssignments[seatId]
     const isAssigned = assignedRole !== undefined
-    const isSelectedRole = assignedRole === selectedRole
     const hasSelectedRole = selectedRole !== null
+    const isSelectedInstance = selectedInstanceSeat === seatId
 
-    // All seats start as outline
     const baseStyle = 'border border-stroke-sub-300 bg-transparent text-text-strong-950 hover:bg-primary-alpha-16'
 
-    // If a role is selected
     if (hasSelectedRole) {
-      if (isAssigned && isSelectedRole) {
-        // Assigned to selected role: filled blue
+      if (isAssigned && isSelectedInstance) {
         return 'bg-primary-base text-text-white-0 border-blue-500 hover:bg-primary-dark'
-      } else if (isAssigned) {
-        // Assigned to other role: disable
+      } else if (isAssigned && String(assignedRole) !== `${String(selectedRole?.id)}:${selectedRole?.instanceId}`) {
         return 'bg-primary-alpha-10 text-text-sub-600 border-primary-alpha-16'
       } else {
-        // Available for assignment: light blue fill
         return 'border border-stroke-sub-300 bg-transparent text-text-strong-950 hover:bg-primary-alpha-10'
       }
     }
 
-    // No role selected: all outline
     return baseStyle
   }
 
   const handleSeatClick = (seatId: string) => {
     if (selectedRole === null) return
     const assignedRole = seatAssignments[seatId]
-    if (assignedRole === undefined || assignedRole === selectedRole) {
+    if (assignedRole === undefined || String(assignedRole) === `${String(selectedRole.id)}:${selectedRole.instanceId}`) {
       onSeatClick(seatId)
     }
   }
@@ -73,7 +80,7 @@ export default function SeatGrid({
             {row.map((seat) => {
               const isAssignedToOther =
                 seatAssignments[seat.id] !== undefined &&
-                seatAssignments[seat.id] !== selectedRole
+                String(seatAssignments[seat.id]) !== `${String(selectedRole?.id)}:${selectedRole?.instanceId}`
               const isClickable =
                 selectedRole !== null && !isAssignedToOther
 
@@ -95,4 +102,22 @@ export default function SeatGrid({
       </div>
     </div>
   )
+}
+
+// helpers
+const floorLetter = (floor?: string) => {
+  if (!floor) return 'A'
+  if (String(floor).includes('first')) return 'A'
+  if (String(floor).includes('second')) return 'B'
+  if (String(floor).includes('third')) return 'C'
+  return 'X'
+}
+
+const generateSeatsForFloor = (floor?: string): Seat[] => {
+  const letter = floorLetter(floor)
+  const seats: Seat[] = []
+  for (let i = 0; i < 56; i++) {
+    seats.push({ id: `${letter}-${i}` })
+  }
+  return seats
 }
