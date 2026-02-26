@@ -1,5 +1,6 @@
 import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/atomic/sidebar'
-import { Bell, Calendar, LayoutPanelLeft, Settings, type LucideIcon } from 'lucide-react'
+import { Calendar, LayoutPanelLeft, Settings, type LucideIcon } from 'lucide-react'
+import { useLocation } from 'react-router-dom';
 
 interface Item {
     title: string,
@@ -18,10 +19,6 @@ const Items: Item[] = [
         url: '/orders'
     },
     {
-        title: 'notification',
-        icon: Bell,
-    },
-    {
         title: 'Settings',
         icon: Settings,
         url: '/settings'
@@ -29,13 +26,16 @@ const Items: Item[] = [
     
 ]
 const NavItem = () => {
+  const location  = useLocation();
+  const currentPath = location.pathname;
+
   return (
     <SidebarGroup className='space-y-1'>
         {Items.map((item, idx) => {
             return(
                 <SidebarMenu key={idx}>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton asChild isActive={currentPath === item.url}>
                             <a href={item.url}>
                                 {<item.icon/>}
                                 <span>{item.title}</span>

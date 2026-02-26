@@ -10,7 +10,7 @@ export function SidebarItem() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild >
               <a href="#">
                 <Logo/>
               </a>
