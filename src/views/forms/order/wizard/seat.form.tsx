@@ -6,16 +6,129 @@ import { useState, useEffect } from "react"
 import { useSelector, useDispatch } from 'react-redux';
 import { selectWizardShiftAssignments, selectWizardSeatAssignments, selectWizardShifts } from '@/store/wizard/wizard.selector';
 import { setSeatAssignment, removeSeatAssignment, addShiftAssignment } from '@/store/wizard/wizard.slice';
+import { officeService, type OfficeDto } from '@/services/office/office.service';
+
+type FloorOption = {
+    id: string;
+    officeId: number;
+    mapId: number;
+    floor: number;
+    section: string;
+    total: number;
+    used: number;
+    seatPrefix: string;
+};
+
+const toFloorOptionId = (officeId: number, floor: number, section: string) =>
+    `office-${officeId}-floor-${floor}-${section}`.replace(/\s+/g, '-').toLowerCase();
+
+const toSeatPrefix = (floor: number, section: string) =>
+    `F${floor}${section.slice(0, 1).toUpperCase() || 'A'}`;
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object' && 'message' in error) {
+        return String((error as { message?: unknown }).message ?? fallback);
+    }
+    return fallback;
+};
 
 const SeatForm = () => {
     const [selectedRole, setSelectedRole] = useState<{ id: number | string; instanceId: string } | null>(null)
     const [activeShift, setActiveShift] = useState<string>('')
-    const [selectedFloor, setSelectedFloor] = useState<string>('first-floor')
+    const [selectedFloor, setSelectedFloor] = useState<string>('')
+    const [offices, setOffices] = useState<OfficeDto[]>([])
+    const [selectedOfficeId, setSelectedOfficeId] = useState<number | null>(null)
+    const [floorOptions, setFloorOptions] = useState<FloorOption[]>([])
+    const [isOfficeLoading, setIsOfficeLoading] = useState(false)
+    const [officeError, setOfficeError] = useState<string | null>(null)
     const dispatch = useDispatch();
 
     const shiftRoleAssignments = useSelector(selectWizardShiftAssignments);
     const shiftSeatAssignments = useSelector(selectWizardSeatAssignments);
     const shifts = useSelector(selectWizardShifts) ?? [];
+
+    const currentOffice = selectedOfficeId
+        ? offices.find((office) => office.id === selectedOfficeId)
+        : undefined;
+    const currentFloor = floorOptions.find((opt) => opt.id === selectedFloor);
+    const availableSeats = currentFloor ? Math.max(0, currentFloor.total - currentFloor.used) : 0;
+    const officeMeta = (currentOffice?.data ?? {}) as Record<string, unknown>;
+    const officeTimezone = typeof officeMeta.timezone === 'string' ? officeMeta.timezone : 'N/A';
+    const officePhone = typeof officeMeta.phone === 'string' ? officeMeta.phone : '—';
+
+    useEffect(() => {
+        let mounted = true;
+        const fetchOffices = async () => {
+            setIsOfficeLoading(true);
+            setOfficeError(null);
+            try {
+                const data = await officeService.listOffices({ limit: 10 });
+                if (!mounted) return;
+                setOffices(data);
+                if (data.length > 0) {
+                    setSelectedOfficeId((prev) => prev ?? data[0].id);
+                } else {
+                    setSelectedOfficeId(null);
+                }
+            } catch (error) {
+                if (!mounted) return;
+                setOfficeError(getErrorMessage(error, 'Failed to load offices'));
+            } finally {
+                if (mounted) setIsOfficeLoading(false);
+            }
+        };
+
+        fetchOffices();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!selectedOfficeId) {
+            setFloorOptions([]);
+            setSelectedFloor('');
+            return;
+        }
+
+        let mounted = true;
+        const fetchMaps = async () => {
+            setIsOfficeLoading(true);
+            setOfficeError(null);
+            try {
+                const maps = await officeService.listCubicalMaps({ office_id: selectedOfficeId, limit: 20 });
+                if (!mounted) return;
+                const nextOptions: FloorOption[] = maps.map((map) => ({
+                    id: toFloorOptionId(selectedOfficeId, map.floor, map.section),
+                    officeId: selectedOfficeId,
+                    mapId: map.id,
+                    floor: map.floor,
+                    section: map.section,
+                    total: map.total_cubicals,
+                    used: map.used_cubicals,
+                    seatPrefix: toSeatPrefix(map.floor, map.section),
+                }));
+                setFloorOptions(nextOptions);
+                setSelectedFloor((prev) => {
+                    if (prev && nextOptions.some((opt) => opt.id === prev)) return prev;
+                    return nextOptions[0]?.id ?? '';
+                });
+            } catch (error) {
+                if (!mounted) return;
+                setFloorOptions([]);
+                setSelectedFloor('');
+                setOfficeError(getErrorMessage(error, 'Failed to load cubical maps'));
+            } finally {
+                if (mounted) setIsOfficeLoading(false);
+            }
+        };
+
+        fetchMaps();
+        return () => {
+            mounted = false;
+        };
+    }, [selectedOfficeId]);
 
     useEffect(() => {
         if ((!activeShift || activeShift === '') && shifts && shifts.length > 0) {
@@ -32,20 +145,21 @@ const SeatForm = () => {
                 }
             } else setSelectedRole(null);
         }
-        // migrate any legacy seat keys (without floor prefix) to first-floor:<seatId>
+
+        const defaultFloorKey = selectedFloor || floorOptions[0]?.id || 'first-floor';
+
+        // migrate any legacy seat keys (without floor prefix) to <defaultFloorKey>:<seatId>
         Object.entries(shiftSeatAssignments).forEach(([shiftKey, map]) => {
             Object.entries(map).forEach(([sId, cId]) => {
                 if (!String(sId).includes(':')) {
-                    const composite = `first-floor:${sId}`;
-                    // create new prefixed assignment and remove old unprefixed
-                    // legacy cId is category id (number) without instance index; migrate to first instance (idx 0)
+                    const composite = `${defaultFloorKey}:${sId}`;
                     const migratedCategory = `${String(cId)}:0`;
                     dispatch(setSeatAssignment({ shift: shiftKey, seatId: composite, categoryId: migratedCategory } as any));
                     dispatch(removeSeatAssignment({ shift: shiftKey, seatId: sId }));
                 }
             });
         });
-    }, [shifts, shiftRoleAssignments, activeShift]);
+    }, [shifts, shiftRoleAssignments, activeShift, floorOptions, selectedFloor]);
 
     const handleShiftChange = (v: string) => {
         setActiveShift(v)
@@ -69,7 +183,7 @@ const SeatForm = () => {
     }
 
     const handleSeatClick = (seatId: string) => {
-        if (selectedRole === null) return
+        if (selectedRole === null || !selectedFloor) return
 
         const compositeId = `${selectedFloor}:${seatId}`
         const assignmentsForShift = (shiftSeatAssignments[activeShift] ?? {});
@@ -109,23 +223,62 @@ const SeatForm = () => {
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                    <h3 className='text-xl font-semibold'>Configure your team</h3>
-                    <p>Select the number of professionals required for your operations.</p>
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                        <h3 className='text-xl font-semibold'>Configure your team</h3>
+                        <p>Select the number of professionals required for your operations.</p>
+                        {officeError && <p className="text-sm text-destructive mt-2">{officeError}</p>}
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-3 md:items-end">
+                        <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase text-text-sub-500">Office</p>
+                            <div className="text-sm font-semibold border border-stroke-soft-200 rounded px-3 py-2 bg-background-white-0 min-h-9 flex items-center">
+                                {currentOffice?.name ?? (isOfficeLoading ? 'Loading…' : 'No office found')}
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase text-text-sub-500">Floor section</p>
+                            <Select
+                                value={selectedFloor}
+                                onValueChange={setSelectedFloor}
+                                disabled={isOfficeLoading || floorOptions.length === 0}
+                            >
+                                <SelectTrigger size="sm" className="w-48">
+                                    <SelectValue placeholder={isOfficeLoading ? 'Loading floors...' : 'Select floor'} />
+                                </SelectTrigger>
+                                <SelectContent position="popper">
+                                    <SelectGroup>
+                                        {floorOptions.map((option) => (
+                                            <SelectItem key={option.id} value={option.id}>
+                                                Floor {option.floor} · {option.section} ({Math.max(0, option.total - option.used)} open)
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
-                <Select value={selectedFloor} onValueChange={setSelectedFloor}>
-                    <SelectTrigger size="sm" className="w-36">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                        <SelectGroup>
-                            <SelectItem value={"first-floor"} aria-selected>First floor</SelectItem>
-                            <SelectItem value={"second-floor"}>Second floor</SelectItem>
-                            <SelectItem value={"third-floor"}>Third floor</SelectItem>
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
+                {/* {currentOffice && currentFloor && (
+                    <div className="grid gap-4 md:grid-cols-3 bg-background-white-0 border border-stroke-soft-200 rounded-md p-4">
+                        <div>
+                            <p className="text-xs text-text-sub-500">Office</p>
+                            <p className="text-sm font-semibold">{currentOffice.name}</p>
+                            <p className="text-xs text-text-sub-500">{currentOffice.address}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-text-sub-500">Timezone</p>
+                            <p className="text-sm font-semibold">{officeTimezone}</p>
+                            <p className="text-xs text-text-sub-500">{officePhone}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-text-sub-500">Seats available</p>
+                            <p className="text-sm font-semibold">{availableSeats} / {currentFloor.total}</p>
+                            <p className="text-xs text-text-sub-500">Section {currentFloor.section} · Floor {currentFloor.floor}</p>
+                        </div>
+                    </div>
+                )} */}
             </div>
 
             <Tabs value={activeShift} onValueChange={handleShiftChange}>
@@ -136,6 +289,15 @@ const SeatForm = () => {
                 </TabsList>
                 {shifts.map((sh) => {
                     const seatAssignments = shiftSeatAssignments[sh.key] ?? {};
+                    if (floorOptions.length === 0 || !selectedFloor) {
+                        return (
+                            <TabsContent key={sh.key} value={sh.key}>
+                                <div className="border border-dashed border-stroke-soft-200 rounded-md p-8 text-sm text-text-sub-500">
+                                    Select an office floor to load the seating layout.
+                                </div>
+                            </TabsContent>
+                        );
+                    }
                     // derive only the assignments for the selected floor
                     const floorPrefix = `${selectedFloor}:`;
                     const floorSeatAssignments: Record<string, string> = {};
@@ -176,6 +338,8 @@ const SeatForm = () => {
                                         seatAssignments={floorSeatAssignments}
                                         selectedFloor={selectedFloor}
                                         onSeatClick={handleSeatClick}
+                                        totalSeats={currentFloor?.total}
+                                        seatPrefix={currentFloor?.seatPrefix}
                                     />
                                 </div>
                             </div>

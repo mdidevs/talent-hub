@@ -14,17 +14,19 @@ type FormValues = {
 };
 
 export const LoginForm: React.FC = () => {
-  const { login: doLogin, isLoading, error: loginError } = useLogin();
+  const { login: doLogin, isLoading, error: loginError, isAuthenticated } = useLogin();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useLogin();
+
+  const getRedirectPath = React.useCallback(() => {
+    return (location.state as any)?.from || '/plan';
+  }, [location.state]);
 
   React.useEffect(() => {
     if (isAuthenticated) {
-      const redirect = (location.state as any)?.from || '/team';
-      navigate(redirect, { replace: true });
+      navigate(getRedirectPath(), { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, navigate, getRedirectPath]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: loginResolver,
@@ -36,8 +38,7 @@ export const LoginForm: React.FC = () => {
     try {
       const res: any = await doLogin({ email: data.email, password: data.password });
       if (res && res.meta && res.meta.requestStatus === 'fulfilled') {
-        const redirect = (location.state as any)?.from || '/team';
-        navigate(redirect);
+        navigate(getRedirectPath(), { replace: true });
       }
     } catch (err) {
       // noop, error handled in hook

@@ -1,30 +1,21 @@
 'use client'
 
-interface Seat {
-  id: string
-}
-
-// Generate 59 seats (A0-A58) based on the design
-const generateSeats = (): Seat[] => {
-  const seats: Seat[] = []
-  for (let i = 0; i <56; i++) {
-    seats.push({ id: `A-${i}` })
-  }
-  return seats
-}
-
 export default function SeatGrid({
   selectedRole,
   seatAssignments,
   onSeatClick,
   selectedFloor,
+  totalSeats,
+  seatPrefix,
 }: {
   selectedRole: { id: number | string; instanceId: string } | null
   seatAssignments: Record<string, string>
   onSeatClick: (seatId: string) => void
   selectedFloor?: string
+  totalSeats?: number
+  seatPrefix?: string
 }) {
-  const seats = generateSeatsForFloor(selectedFloor)
+  const seats = generateSeatsForFloor(selectedFloor, totalSeats, seatPrefix)
 
   // Group seats into rows (7 columns per row)
   const rows: Seat[][] = []
@@ -105,19 +96,23 @@ export default function SeatGrid({
 }
 
 // helpers
-const floorLetter = (floor?: string) => {
-  if (!floor) return 'A'
-  if (String(floor).includes('first')) return 'A'
-  if (String(floor).includes('second')) return 'B'
-  if (String(floor).includes('third')) return 'C'
-  return 'X'
+type Seat = { id: string }
+
+const generateSeatsForFloor = (
+  floorKey?: string,
+  totalSeats = 56,
+  prefix?: string,
+): Seat[] => {
+  const labelPrefix = prefix ?? derivePrefixFromKey(floorKey)
+  return Array.from({ length: Math.max(1, totalSeats) }, (_, index) => ({
+    id: `${labelPrefix}-${index}`,
+  }))
 }
 
-const generateSeatsForFloor = (floor?: string): Seat[] => {
-  const letter = floorLetter(floor)
-  const seats: Seat[] = []
-  for (let i = 0; i < 56; i++) {
-    seats.push({ id: `${letter}-${i}` })
-  }
-  return seats
+const derivePrefixFromKey = (key?: string) => {
+  if (!key) return 'A'
+  if (key.includes('first')) return 'A'
+  if (key.includes('second')) return 'B'
+  if (key.includes('third')) return 'C'
+  return key
 }

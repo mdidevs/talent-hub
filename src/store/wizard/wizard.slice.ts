@@ -1,5 +1,26 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { marketService } from '@/services/market/market.service';
+import type { MarketItemDto } from '@/services/market/market.service';
+
+const normalizePlanValue = (value?: string | number | null) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+const canonicalizePlan = (value?: string | number | null) => {
+  const normalized = normalizePlanValue(value);
+  if (!normalized) return '';
+  return normalized.replace(/^plan[_-]?/, '');
+};
+
+type CategoryPlanOption = {
+  planId: number;
+  code?: string;
+  label?: string | null;
+  price: number;
+  unit?: string;
+};
 
 export type WizardCategory = {
   id: number | string;
@@ -9,6 +30,8 @@ export type WizardCategory = {
   unit?: string;
   badges?: string[];
   qty?: number | string;
+  planId?: number;
+  planOptions?: CategoryPlanOption[];
 };
 
 type SelectionItem = {
@@ -21,6 +44,7 @@ type WizardState = {
   categories: WizardCategory[];
   selected: SelectionItem[];
   plan?: string;
+  planRate?: number;
   creditLimit?: number;
   shifts: { key: string; title: string; start?: string; end?: string }[];
   shiftAssignments: Record<string, Array<number | string>>;
@@ -43,22 +67,172 @@ const initialState: WizardState = {
   ],
   agreement: { signed: false },
   plan: 'pro',
+  planRate: undefined,
   creditLimit: 0,
   currentStep: 0,
   isLoading: false,
   error: null,
 };
 
-export const fetchWizardCategories = createAsyncThunk<WizardCategory[]>('wizard/fetchCategories', async () => {
-  const data: WizardCategory[] = [
-    { id: 1, title: 'L1 Support Engineer', description: 'Tier 1 . CCNA', price: 16, unit: '/ day', badges: ['Monitoring', 'Ticketing'], qty: 0 },
-    { id: 2, title: 'L2 Support Engineer', description: 'Tier 2 . CCNP', price: 22, unit: '/ day', badges: ['Monitoring', 'Escalation'], qty: 0 },
-    { id: 3, title: 'Site Reliability', description: 'SRE . DevOps', price: 30, unit: '/ day', badges: ['Automation', 'Observability'], qty: 0 },
-    { id: 4, title: 'Security Analyst', description: 'SOC . SIEM', price: 20, unit: '/ day', badges: ['Monitoring', 'Alerting'], qty: 0 },
-  ];
+const formatUnit = (billingCycle?: string) => {
+  if (!billingCycle) return '/ day';
+  return `/ ${billingCycle.toLowerCase()}`;
+};
 
-  await new Promise((r) => setTimeout(r, 200));
-  return data;
+const toWizardCategories = (
+  items: MarketItemDto[],
+  categoryLabels: Map<number, string>,
+): WizardCategory[] => {
+  return items.map((item) => {
+    const itemPlans = item.itemPlans ?? [];
+    const planOptions: CategoryPlanOption[] = itemPlans.map((plan) => {
+      const pricePlan = plan.pricePlan;
+      return {
+        planId: plan.id,
+        code: pricePlan?.name ?? '',
+        label: pricePlan?.label ?? undefined,
+        price: Number(pricePlan?.price ?? 0),
+        unit: formatUnit(pricePlan?.billing_cycle),
+      };
+    });
+
+    const activePlan =
+      itemPlans.find(
+        (plan) => plan.status?.toLowerCase() === 'active'.toLowerCase(),
+      ) ?? itemPlans[0];
+
+    const activePlanOption = activePlan
+      ? planOptions.find((option) => option.planId === activePlan.id)
+      : planOptions[0];
+
+    const pricePlan = activePlan?.pricePlan;
+    const categoryLabel = categoryLabels.get(item.market_category_id);
+
+    const badges = [categoryLabel, activePlanOption?.label ?? pricePlan?.label].filter(
+      (badge): badge is string => Boolean(badge),
+    );
+
+    return {
+      id: item.id,
+      title: item.name,
+      description: item.description ?? '',
+      price: activePlanOption?.price ?? Number(pricePlan?.price ?? 0),
+      unit: activePlanOption?.unit ?? formatUnit(pricePlan?.billing_cycle),
+      badges,
+      qty: 0,
+      planId: activePlanOption?.planId,
+      planOptions,
+    };
+  });
+};
+
+const isPlanMatch = (candidate?: string | null, selected?: string | number | null) => {
+  const normalizedCandidate = normalizePlanValue(candidate);
+  const normalizedSelection = normalizePlanValue(selected);
+
+  if (!normalizedCandidate || !normalizedSelection) {
+    return false;
+  }
+
+  if (normalizedCandidate === normalizedSelection) {
+    return true;
+  }
+
+  const canonicalCandidate = canonicalizePlan(candidate);
+  const canonicalSelection = canonicalizePlan(selected);
+
+  return Boolean(canonicalCandidate && canonicalCandidate === canonicalSelection);
+};
+
+const applyPlanSelection = (
+  categories: WizardCategory[],
+  selectedPlan?: string,
+  planRate?: number,
+) => {
+  if (!categories || categories.length === 0) return;
+
+  categories.forEach((category) => {
+    if (!category.planOptions || category.planOptions.length === 0) {
+      if (planRate !== undefined && planRate !== null) {
+        category.price = planRate;
+        category.unit = category.unit ?? '/ day';
+      }
+      return;
+    }
+
+    const target = selectedPlan
+      ? category.planOptions.find(
+          (option) =>
+            isPlanMatch(option.code, selectedPlan) ||
+            isPlanMatch(option.label ?? undefined, selectedPlan),
+        )
+      : undefined;
+
+    const resolvedOption = target ?? category.planOptions[0];
+    if (!resolvedOption) return;
+
+    if (planRate !== undefined && planRate !== null) {
+      category.price = planRate;
+      category.unit = resolvedOption.unit ?? category.unit ?? '/ day';
+    } else {
+      category.price = resolvedOption.price;
+      category.unit = resolvedOption.unit ?? category.unit;
+    }
+    category.planId = resolvedOption.planId;
+  });
+};
+
+const derivePlanRateFromCategories = (
+  categories: WizardCategory[],
+  selectedPlan?: string,
+): number | undefined => {
+  if (!categories || categories.length === 0 || !selectedPlan) return undefined;
+  for (const category of categories) {
+    if (!category.planOptions) continue;
+    const match = category.planOptions.find(
+      (option) =>
+        isPlanMatch(option.code, selectedPlan) ||
+        isPlanMatch(option.label ?? undefined, selectedPlan),
+    );
+    if (match) return match.price;
+  }
+  return undefined;
+};
+
+const getErrorMessage = (err: unknown, fallback = 'Something went wrong') => {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && 'message' in err) {
+    return String((err as { message?: unknown }).message ?? fallback);
+  }
+  return fallback;
+};
+
+export const fetchWizardCategories = createAsyncThunk<
+  WizardCategory[],
+  void,
+  { rejectValue: string }
+>('wizard/fetchCategories', async (_: void, thunkAPI) => {
+  try {
+    const [categoryResult, itemResult] = await Promise.all([
+      marketService.listCategories({ limit: 100, page: 1 }),
+      marketService.listItems({ limit: 100, page: 1 }),
+    ]);
+
+    if (!itemResult || itemResult.length === 0) {
+      throw new Error('No market items available. Please seed the database.');
+    }
+
+    const categoryLabelMap = new Map<number, string>();
+    categoryResult.forEach((cat) => {
+      categoryLabelMap.set(cat.id, cat.label ?? cat.name);
+    });
+
+    return toWizardCategories(itemResult, categoryLabelMap);
+  } catch (error) {
+    return thunkAPI.rejectWithValue(
+      getErrorMessage(error, 'Failed to load categories'),
+    );
+  }
 });
 
 export const fetchWizardShifts = createAsyncThunk('wizard/fetchShifts', async () => {
@@ -77,30 +251,8 @@ const wizardSlice = createSlice({
   reducers: {
     addSelection: (state, action: PayloadAction<{ categoryId: number | string; qty?: number }>) => {
       const { categoryId, qty = 1 } = action.payload;
-      // determine effective credit limit: explicit creditLimit >0 wins, otherwise plan defaults
-      const planLimit = (state.creditLimit && state.creditLimit > 0)
-        ? state.creditLimit
-        : state.plan === 'pro'
-          ? 200
-          : state.plan === 'premium'
-            ? 150
-            : undefined;
-
       // build prospective selection set: push a new record for this add
       const prospective = [...state.selected.map((s) => ({ ...s })), { categoryId, qty }];
-
-      // compute subtotal for prospective selections
-      const subtotal = prospective.reduce((sum, s) => {
-        const cat = state.categories.find((c) => String(c.id) === String(s.categoryId));
-        const price = cat ? Number(cat.price ?? 0) : 0;
-        return sum + price * (s.qty || 0);
-      }, 0);
-
-      if (planLimit !== undefined && subtotal > planLimit) {
-        state.error = 'Credit limit exceeded';
-        return;
-      }
-
       state.error = null;
       // push a new selection entry (do not merge with existing)
       // generate a stable instanceId for this selection
@@ -157,14 +309,6 @@ const wizardSlice = createSlice({
     },
     setQty: (state, action: PayloadAction<{ instanceId: string; qty: number; categoryId?: number | string }>) => {
       const { instanceId, qty, categoryId } = action.payload;
-      const planLimit = (state.creditLimit && state.creditLimit > 0)
-        ? state.creditLimit
-        : state.plan === 'pro'
-          ? 200
-          : state.plan === 'premium'
-            ? 150
-            : undefined;
-
       const prospective = state.selected.map((s) => ({ ...s }));
       const idx = prospective.findIndex((s) => String(s.instanceId) === String(instanceId));
       if (idx >= 0) prospective[idx].qty = qty;
@@ -175,23 +319,23 @@ const wizardSlice = createSlice({
         else prospective.push({ categoryId: categoryId ?? '', qty, instanceId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` as string });
       }
 
-      const subtotal = prospective.reduce((sum, s) => {
-        const cat = state.categories.find((c) => String(c.id) === String(s.categoryId));
-        const price = cat ? Number(cat.price ?? 0) : 0;
-        return sum + price * (s.qty || 0);
-      }, 0);
-
-      if (planLimit !== undefined && subtotal > planLimit) {
-        state.error = 'Credit limit exceeded';
-        return;
-      }
-
       state.error = null;
       const item = state.selected.find((s) => String(s.instanceId) === String(instanceId) || (categoryId !== undefined && s.categoryId === categoryId));
       if (item) item.qty = qty as any;
     },
     setPlan: (state, action: PayloadAction<string>) => {
       state.plan = action.payload;
+      if (state.planRate === undefined || state.planRate === null) {
+        const derived = derivePlanRateFromCategories(state.categories, state.plan);
+        if (derived !== undefined) {
+          state.planRate = derived;
+        }
+      }
+      applyPlanSelection(state.categories, state.plan, state.planRate);
+    },
+    setPlanRate: (state, action: PayloadAction<number | undefined>) => {
+      state.planRate = action.payload;
+      applyPlanSelection(state.categories, state.plan, state.planRate);
     },
     setCreditLimit: (state, action: PayloadAction<number>) => {
       state.creditLimit = action.payload;
@@ -215,10 +359,20 @@ const wizardSlice = createSlice({
       .addCase(fetchWizardCategories.fulfilled, (state, action) => {
         state.isLoading = false;
         state.categories = action.payload;
+        if (state.planRate === undefined || state.planRate === null) {
+          const derived = derivePlanRateFromCategories(state.categories, state.plan);
+          if (derived !== undefined) {
+            state.planRate = derived;
+          }
+        }
+        applyPlanSelection(state.categories, state.plan, state.planRate);
       })
       .addCase(fetchWizardCategories.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.error?.message ?? 'Failed to load categories';
+        state.error =
+          (action.payload as string) ??
+          action.error?.message ??
+          'Failed to load categories';
       });
     builder
       .addCase(fetchWizardShifts.fulfilled, (state, action) => {
@@ -230,5 +384,19 @@ const wizardSlice = createSlice({
   },
 });
 
-export const { addSelection, removeSelection, setQty, setStep, clearSelection, addShiftAssignment, removeShiftAssignment, setSeatAssignment, removeSeatAssignment, setAgreement, setPlan, setCreditLimit } = wizardSlice.actions;
+export const {
+  addSelection,
+  removeSelection,
+  setQty,
+  setStep,
+  clearSelection,
+  addShiftAssignment,
+  removeShiftAssignment,
+  setSeatAssignment,
+  removeSeatAssignment,
+  setAgreement,
+  setPlan,
+  setPlanRate,
+  setCreditLimit,
+} = wizardSlice.actions;
 export default wizardSlice.reducer;

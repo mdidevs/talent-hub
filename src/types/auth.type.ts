@@ -3,6 +3,7 @@ export type User = {
   name: string;
   email: string;
   role?: string; // optional (admin/user)
+  customer_id?: number | null;
 };
 
 export type AuthResponse = {

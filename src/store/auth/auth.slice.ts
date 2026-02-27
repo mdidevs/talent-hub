@@ -23,33 +23,27 @@ const getErrorMessage = (err: unknown, fallback = "Something went wrong") => {
 };
 
 // ---------- Thunks ----------
-export const loginUser = createAsyncThunk<AuthResponse,{ email: string; password: string },{ rejectValue: string }>("auth/loginUser", async ({ email, password }, thunkAPI) => {
+export const loginUser = createAsyncThunk<
+  AuthResponse,
+  { email: string; password: string },
+  { rejectValue: string }
+>("auth/loginUser", async ({ email, password }, thunkAPI) => {
   try {
-    // simple local auth for now: accept admin / 123
-    if ((email === 'admin' || email === 'admin@local') && password === '123') {
-      const user = { id: '1', name: 'Admin', email: String(email) } as any;
-      const token = 'sample-token-abc123';
+    const result = await authService.login(email, password);
 
-      try {
-        persistToken(token);
-        persistUser(user as any);
-      } catch (err) {
-        // ignore storage errors
-      }
-
-      // tiny delay to mimic async
-      await new Promise((r) => setTimeout(r, 200));
-
-      return { user, token } as AuthResponse;
+    // fallback persistence in case the service call throws before storage
+    try {
+      persistToken(result.token);
+      persistUser(result.user);
+    } catch (err) {
+      console.warn("Unable to persist auth state", err);
     }
 
-    // otherwise attempt real service call as fallback
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // return await authService.login(email, password as any);
-    return thunkAPI.rejectWithValue('Invalid credentials');
+    return result;
   } catch (err: any) {
     const message =
       err?.response?.data?.message ||
+      err?.response?.data?.error ||
       getErrorMessage(err, "Login failed");
     return thunkAPI.rejectWithValue(message);
   }
@@ -166,6 +160,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;

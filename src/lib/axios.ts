@@ -1,15 +1,19 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import { appConfig } from '@/configs/app.config';
 
 class AxiosMiddleware {
   private instance: AxiosInstance;
 
   constructor(baseURL?: string) {
+    const resolvedBaseUrl = baseURL || appConfig.apiBaseUrl;
+
     this.instance = axios.create({
-      baseURL: baseURL || (import.meta.env.VITE_API_URL),
+      baseURL: resolvedBaseUrl,
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
+      validateStatus: (status) => status >= 200 && status < 400,
     });
 
     this.setupInterceptors();
@@ -34,6 +38,10 @@ class AxiosMiddleware {
         // Add any other custom headers
         config.headers['X-Requested-With'] = 'XMLHttpRequest';
 
+        if (!config.baseURL) {
+          config.baseURL = appConfig.apiBaseUrl;
+        }
+
         return config;
       },
       (error) => {
@@ -47,11 +55,10 @@ class AxiosMiddleware {
         return response;
       },
       (error) => {
-        // Handle common errors
         if (error.response?.status === 401) {
-          // Unauthorized - clear token and redirect to login
+          // Unauthorized - clear token so UI can react without hard refresh
           localStorage.removeItem('token');
-          window.location.href = '/login';
+          window.dispatchEvent(new Event('auth:unauthorized'));
         }
 
         return Promise.reject(error);

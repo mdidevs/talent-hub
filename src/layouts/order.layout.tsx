@@ -8,16 +8,20 @@ import { logoutUser } from '@/store/auth/auth.slice';
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectWizardCategories, selectWizardSelected } from '@/store/wizard/wizard.selector';
+import { selectWizardCategories, selectWizardSelected, selectWizardShiftAssignments, selectWizardSeatAssignments } from '@/store/wizard/wizard.selector';
 import useWizard from '@/hooks/wizard/wizard.hook';
 
 const OrderWizardLayout: React.FC = () => {
     const selected = useSelector(selectWizardSelected);
     const categories = useSelector(selectWizardCategories);
+    const shiftAssignments = useSelector(selectWizardShiftAssignments);
+    const seatAssignments = useSelector(selectWizardSeatAssignments);
     const navigate = useNavigate();
     const dispatch = useDispatch();
         const { prev, next, plan, creditLimit } = useWizard();
         const location = useLocation();
+        const isTeamRoute = location.pathname === '/team';
+        const isSeatRoute = location.pathname === '/seat';
 
         const routesOrder = ['/plan','/team','/seat','/review','/agreement','/checkout'];
         const currentIndex = Math.max(0, routesOrder.indexOf(location.pathname));
@@ -49,6 +53,14 @@ const OrderWizardLayout: React.FC = () => {
     const unit = categories[0]?.unit ?? '/ day';
     const usageMax = plan === 'pro' ? 200 : plan === 'premium' ? 150 : (creditLimit ?? 0);
     const usagePct = usageMax > 0 ? Math.min(100, Math.round((subtotal / usageMax) * 100)) : 0;
+    const assignedCount = Object.values(shiftAssignments || {}).reduce((sum, ids) => sum + (ids?.length ?? 0), 0);
+    const seatAssignmentCount = Object.values(seatAssignments || {}).reduce((sum, map) => sum + Object.keys(map ?? {}).length, 0);
+    const hasTeamSelections = totalProfessionals > 0;
+    const hasShiftAssignments = assignedCount > 0;
+    const hasSeatSelections = seatAssignmentCount > 0;
+    const blockTeamStep = isTeamRoute && (!hasTeamSelections || !hasShiftAssignments);
+    const blockSeatStep = isSeatRoute && (!hasSeatSelections || !hasShiftAssignments);
+    const isNextDisabled = blockTeamStep || blockSeatStep;
 
     return (
     <div className="min-h-screen bg-background-week-50">
@@ -87,15 +99,15 @@ const OrderWizardLayout: React.FC = () => {
                     <div>
                         <p>Estimated Subtotal</p>
                         <h6>${subtotal} {unit}</h6>
-                        <div className="mt-1 w-40">
+                        {/* <div className="mt-1 w-40">
                             <div className="w-full bg-primary-alpha-10 h-1 rounded overflow-hidden">
                                 <div className="h-1 bg-primary-base" style={{ width: `${usagePct}%` }} />
-                            </div>
-                            <p className="text-xs mt-1">{subtotal}/{usageMax} usage</p>
-                        </div>
+                            </div> */}
+                            {/* <p className="text-xs mt-1">{subtotal}/{usageMax} usage</p> */}
+                        {/* </div> */}
                     </div>
                 </div>
-                <Button onClick={handleNext} className='hover:shadow-xl shadow-primary-alpha-16'>
+                <Button onClick={handleNext} disabled={isNextDisabled} className='hover:shadow-xl shadow-primary-alpha-16'>
                         {currentIndex === 0 ? 'Proceed to team configuration' : 'Next'}
                     <ArrowRight/>
                 </Button>
