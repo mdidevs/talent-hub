@@ -2,14 +2,10 @@
 
 import {
     BadgeCheck,
-    Bell,
     Brush,
     ChevronsUpDown,
     CreditCard,
     LogOutIcon,
-    Monitor,
-    Moon,
-    Sun,
 } from "lucide-react"
 
 import {
@@ -32,7 +28,6 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "../../atomic/sidebar"
-import { Button } from "@/components/atomic/button"
 import { ModeToggle } from "./theme-switch"
 
 export function NavUser({
@@ -90,17 +85,17 @@ export function NavUser({
                         <DropdownMenuSeparator className="bg-stroke-soft-200" />
                         
                         <DropdownMenuGroup className="space-y-2">
-                            <DropdownMenuItem>
-                                <BadgeCheck />
-                                Account
+                            <DropdownMenuItem asChild>
+                                <a href="/settings">
+                                    <BadgeCheck />
+                                    Account
+                                </a>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <CreditCard />
-                                Billing
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Bell />
-                                Notifications
+                            <DropdownMenuItem asChild>
+                                <a href="/settings">
+                                    <CreditCard />
+                                    Billing
+                                </a>
                             </DropdownMenuItem>
                         <DropdownMenuSeparator />
                             <DropdownMenuItem className="justify-between">

@@ -24,12 +24,13 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "rounded-md p-0.75 group-data-[orientation=horizontal]/tabs:h-9 data-[variant=line]:rounded-none group/tabs-list text-text-sub-600 inline-flex w-fit items-center justify-center group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
+  "rounded-md p-0.75 data-[variant=ghost]:p-0 group-data-[orientation=horizontal]/tabs:h-9 data-[variant=line]:rounded-none  group/tabs-list text-text-sub-600 inline-flex w-fit items-center justify-center group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
   {
     variants: {
       variant: {
         default: "bg-background-white-0",
         line: "gap-1 bg-transparent",
+        ghost: "bg-transparent border-none"
       },
     },
     defaultVariants: {

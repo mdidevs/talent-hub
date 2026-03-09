@@ -15,6 +15,11 @@ import CheckoutPage from './pages/order/wizard/checkout.page'
 import { ThemeProvider } from './styles/theme-provider'
 import PlanPage from './pages/order/wizard/plan.page'
 import ProtectedRoute from '@/components/route/ProtectedRoute'
+import Setup from './pages/dashboard/setup.page'
+import Overview from './pages/dashboard/overview.page'
+import Orders from './pages/dashboard/orders/orders.page'
+import OrderDetails from './pages/dashboard/orders/orderDetails.page'
+import Settings from './pages/dashboard/settings/settings.page'
 
 function App() {
   return (
@@ -41,8 +46,14 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={''} />
+            <Route path="/setup" element={<Setup/>} />
+            <Route path="/overview" element={<Overview/>} />
+            <Route path="/orders" element={<Orders/>} />
+            <Route path='/orders/details' element={<OrderDetails/>}/>
+            <Route path="/settings" element={<Settings/>} />
           </Route>
         </Routes>
+
       </BrowserRouter>
     </ThemeProvider>
   )

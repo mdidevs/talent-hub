@@ -71,7 +71,7 @@
     --color-success-light: var(--color-success-light);
     --color-success-lighter: var(--color-success-lighter);
 
-    --color-sidebar: var(--sidebar);
+    --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
