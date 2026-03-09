@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
+import { useForm } from 'react-hook-form';
 import { appConfig } from '@/configs/app.config';
 import { docusignService } from '@/services/docusign/docusign.service';
 
@@ -198,14 +199,46 @@ const createEmptyPdfUrl = () => {
 };
 
 
-export const useNdaAgreement = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [country, setCountry] = useState('');
+
+  // State must be declared before useForm
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreviewSyncing, setIsPreviewSyncing] = useState(false);
   const [signUrl, setSignUrl] = useState<string | undefined>(undefined);
+
+  // useForm for validation (must come after isSubmitting is defined)
+  const { register, handleSubmit: rhfHandleSubmit, formState: { errors, isValid }, trigger, watch, getValues } = useForm({
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      jobTitle: '',
+      companyName: '',
+      businessAddressLine1: '',
+      typeOfBusiness: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+    },
+  });
+
+  // Watch country value for conditional validation
+  const watchedCountry = watch('country');
+
+  // Combine loader states for API and PDF loading
+  const isLoading = isSubmitting;
+
+  // Only generate PDF on submit
+  const onSubmit = async (data: Record<string, string>, event?: React.BaseSyntheticEvent) => {
+    if (event) event.preventDefault();
+    // Create a FormData object from the submitted data
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => formData.append(key, value));
+    // Call runEnvelopeFlow to generate PDF
+    await runEnvelopeFlow(formData, 'submit');
+  };
 
   const previewUrlRef = useRef<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -260,17 +293,21 @@ export const useNdaAgreement = () => {
 
   const buildFormValues = (fd: FormData) => {
     const getValue = (name: string) => (fd.get(name)?.toString() ?? '').trim();
+    const signerFirstName = getValue('firstName');
+    const signerLastName = getValue('lastName');
+    const signerEmail = getValue('email');
+    const countryValue = getValue('country');
     return {
-      signerName: `${firstName} ${lastName}`.trim() || 'Authorized Signatory',
-      signerEmail: email.trim(),
+      signerName: `${signerFirstName} ${signerLastName}`.trim() || 'Authorized Signatory',
+      signerEmail: signerEmail,
       values: {
         effectiveDate: getValue('effectiveDate') || new Date().toISOString().slice(0, 10),
-        signatoryFirstName: firstName,
-        signatoryLastName: lastName,
+        signatoryFirstName: signerFirstName,
+        signatoryLastName: signerLastName,
         companyName: getValue('companyName'),
         typeOfBusiness: getValue('typeOfBusiness'),
         jobTitle: getValue('jobTitle'),
-        workEmail: email.trim(),
+        workEmail: signerEmail,
         monthlyFee: getValue('monthlyFee'),
         confidentialityYears: getValue('confidentialityYears'),
         providerName: getValue('providerName'),
@@ -280,15 +317,17 @@ export const useNdaAgreement = () => {
         city: getValue('city'),
         state: getValue('state'),
         zipCode: getValue('zipCode'),
-        country,
+        country: countryValue,
       },
     } as const;
   };
 
-  const runEnvelopeFlow = async (form: HTMLFormElement, origin: 'submit' | 'blur') => {
-    const { signerName, signerEmail, values } = buildFormValues(new FormData(form));
+  // Accept FormData directly for envelope flow
+  const runEnvelopeFlow = async (formData: FormData, origin: 'submit' | 'blur') => {
 
-    if (!firstName.trim() || !lastName.trim() || !signerEmail) {
+    const { signerName, signerEmail, values } = buildFormValues(formData);
+
+    if (!signerName.trim() || !signerEmail) {
       if (origin === 'blur') {
         renderAgreementPreview({
           status: 'Add signer details to preview the document.',
@@ -310,7 +349,6 @@ export const useNdaAgreement = () => {
     if (origin === 'submit') setIsSubmitting(true);
     else setIsPreviewSyncing(true);
 
-    // Show loader on top of iframe while updating preview
     loadingPdf = true;
     renderAgreementPreview({ status: origin === 'submit' ? 'Creating envelope…' : 'Updating preview…', pdfObjectUrl: previewUrlRef.current ?? undefined, loadingPdf: true });
 
@@ -371,7 +409,6 @@ export const useNdaAgreement = () => {
         return;
       }
 
-      // Loader will be hidden after PDF is loaded in fetchEnvelopeDocumentWithRetry
       loadingPdf = true;
       renderAgreementPreview({ status: 'Loading PDF…', signUrl, loadingPdf: true });
       const blob = await fetchEnvelopeDocumentWithRetry({
@@ -425,19 +462,22 @@ export const useNdaAgreement = () => {
   };
 
   return {
-    firstName,
-    lastName,
-    email,
-    country,
+    // react-hook-form
+    register,
+    rhfHandleSubmit,
+    errors,
+    isValid,
+    trigger,
+    watch,
+    getValues,
+    watchedCountry,
+    isLoading,
+    onSubmit,
+    // legacy/other
     isSubmitting,
-    setFirstName,
-    setLastName,
-    setEmail,
-    setCountry,
     handleSubmit,
     handleFieldBlur,
     formRef,
     signUrl,
     runEnvelopeFlow,
   };
-};

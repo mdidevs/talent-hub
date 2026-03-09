@@ -5,60 +5,22 @@ import { Input } from "@/components/atomic/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/atomic/select"
 import { useNdaAgreement } from "@/hooks/wizard/nda-agreement.hook"
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 
-export const NdaForm = () => {
+export const NdaForm = ({setLoadingPdf}) => {
   const {
+    register,
+    rhfHandleSubmit,
+    errors,
+    isValid,
+    trigger,
+    watchedCountry,
+    isLoading,
+    onSubmit,
     isSubmitting,
     formRef,
     signUrl,
     runEnvelopeFlow,
   } = useNdaAgreement();
-
-  const [isPreviewLoading, setIsPreviewLoading] = useState(true);
-
-  // useForm for validation
-  const { register, handleSubmit: rhfHandleSubmit, formState: { errors, isValid }, trigger, watch, getValues } = useForm({
-    mode: 'onChange',
-    reValidateMode: 'onChange',
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      jobTitle: '',
-      companyName: '',
-      businessAddressLine1: '',
-      typeOfBusiness: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-    },
-  });
-
-  // Watch country value for conditional validation
-  const watchedCountry = watch('country');
-
-  // Remove auto PDF preview effect
-
-  // Combine loader states for API and PDF loading
-  const isLoading = isSubmitting;
-
-
-  // Only generate PDF on submit
-  const onSubmit = async (data: Record<string, string>, event?: React.BaseSyntheticEvent) => {
-    if (event) event.preventDefault();
-    // Create a FormData object from the submitted data
-    const form = document.createElement('form');
-    Object.entries(data).forEach(([key, value]) => {
-      const input = document.createElement('input');
-      input.name = key;
-      input.value = value;
-      form.appendChild(input);
-    });
-    // Call runEnvelopeFlow to generate PDF
-    await runEnvelopeFlow(form, 'submit');
-  };
 
   return (
     <form ref={formRef} onSubmit={rhfHandleSubmit(onSubmit)} className="relative">
@@ -194,12 +156,12 @@ export const NdaForm = () => {
 
         {/* Agreement Preview Loader removed */}
 
-        {/* API Call Loader Overlay */}
+        {/* API Call Loader Overlay
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-50">
             <span className="loader" />
           </div>
-        )}
+        )} */}
       </FieldGroup>
     </form>
   )

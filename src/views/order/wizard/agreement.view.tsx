@@ -16,6 +16,7 @@ const AgreementView = () => {
 
   // Handler for iframe load event
   const handleIframeLoad = () => {
+    alert()
     setLoadingPdf(false);
   };
 
@@ -37,7 +38,7 @@ const AgreementView = () => {
                   <h3>1.NDA Non-Disclosure Agreemen</h3>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <NdaForm/>
+                  <NdaForm pdfUrl={pdfUrl} iframeRef={iframeRef} setLoadingPdf={setLoadingPdf}/>
                 </AccordionContent>
               </AccordionItem>
 
