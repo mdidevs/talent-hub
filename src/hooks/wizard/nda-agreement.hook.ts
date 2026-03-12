@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { appConfig } from '@/configs/app.config';
 import { docusignService } from '@/services/docusign/docusign.service';
@@ -198,6 +198,7 @@ const createEmptyPdfUrl = () => {
   }
 };
 
+export const useNdaAgreement = () => {
 
 
   // State must be declared before useForm
@@ -252,7 +253,18 @@ const createEmptyPdfUrl = () => {
   };
 
   useEffect(() => {
-    renderAgreementPreview({ status: 'Start typing to personalize the agreement.' });
+    const emptyPdfUrl = createEmptyPdfUrl();
+    if (emptyPdfUrl) {
+      cleanupPreviewUrl();
+      previewUrlRef.current = emptyPdfUrl;
+      renderAgreementPreview({
+        status: 'Start typing to personalize the agreement.',
+        pdfObjectUrl: emptyPdfUrl,
+        loadingPdf: false,
+      });
+    } else {
+      renderAgreementPreview({ status: 'Start typing to personalize the agreement.' });
+    }
     return () => {
       cleanupPreviewUrl();
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
@@ -283,7 +295,6 @@ const createEmptyPdfUrl = () => {
           pdfObjectUrl: previewUrlRef.current ?? undefined,
           signUrl,
         });
-        // eslint-disable-next-line no-await-in-loop
         await sleep(backoff);
       }
     }
@@ -445,7 +456,7 @@ const createEmptyPdfUrl = () => {
     e.preventDefault();
     formRef.current = e.currentTarget;
     if (isSubmitting) return;
-    await runEnvelopeFlow(e.currentTarget, 'submit');
+    await runEnvelopeFlow(new FormData(e.currentTarget), 'submit');
   };
 
   const schedulePreviewRefresh = () => {
@@ -453,11 +464,11 @@ const createEmptyPdfUrl = () => {
     if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
     blurTimeoutRef.current = setTimeout(() => {
       if (!formRef.current) return;
-      void runEnvelopeFlow(formRef.current, 'blur');
+      void runEnvelopeFlow(new FormData(formRef.current), 'blur');
     }, 300);
   };
 
-  const handleFieldBlur = (_event?: FocusEvent<HTMLFormElement>) => {
+  const handleFieldBlur = () => {
     schedulePreviewRefresh();
   };
 
@@ -481,3 +492,6 @@ const createEmptyPdfUrl = () => {
     signUrl,
     runEnvelopeFlow,
   };
+};
+
+export const useNdaAgreementHook = useNdaAgreement;

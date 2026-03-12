@@ -4,9 +4,19 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/atomic/f
 import { Input } from "@/components/atomic/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/atomic/select"
 import { useNdaAgreement } from "@/hooks/wizard/nda-agreement.hook"
-import { useEffect, useState } from "react";
+import type { RefObject } from "react";
 
-export const NdaForm = ({setLoadingPdf}) => {
+type NdaFormProps = {
+  pdfUrl?: string;
+  iframeRef?: RefObject<HTMLIFrameElement | null>;
+  setLoadingPdf?: (loading: boolean) => void;
+};
+
+export const NdaForm = ({ pdfUrl, iframeRef, setLoadingPdf }: NdaFormProps) => {
+  void pdfUrl;
+  void iframeRef;
+  void setLoadingPdf;
+
   const {
     register,
     rhfHandleSubmit,
@@ -14,12 +24,9 @@ export const NdaForm = ({setLoadingPdf}) => {
     isValid,
     trigger,
     watchedCountry,
-    isLoading,
     onSubmit,
     isSubmitting,
     formRef,
-    signUrl,
-    runEnvelopeFlow,
   } = useNdaAgreement();
 
   return (
@@ -106,7 +113,7 @@ export const NdaForm = ({setLoadingPdf}) => {
             <FieldLabel htmlFor="postel-code">Country*</FieldLabel>
             <Select
               value={watchedCountry}
-              onValueChange={(value) => {
+              onValueChange={() => {
                 // set value in react-hook-form
                 // react-hook-form's register handles value
                 // No need to call setCountry
