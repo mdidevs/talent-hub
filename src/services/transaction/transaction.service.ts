@@ -27,6 +27,21 @@ export type TransactionDto = {
 
 const apiClient = axiosMiddleware.getInstance();
 
+const normalizeQueryParams = (params: Record<string, unknown> | undefined) => {
+  const query: Record<string, string> = {};
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    query[key] = String(value);
+  });
+  return query;
+};
+
+export type ListTransactionsParams = Partial<{
+  order_id: number | string;
+  page: number;
+  limit: number;
+}>;
+
 const createTransaction = async (
   payload: CreateTransactionPayload,
 ): Promise<TransactionDto> => {
@@ -39,6 +54,28 @@ const createTransaction = async (
   return unwrapApiResponse(response.data);
 };
 
+const listTransactions = async (params?: ListTransactionsParams): Promise<TransactionDto[]> => {
+  const response = await apiClient.get<ApiResponse<TransactionDto[]>>('/transactions', {
+    params: normalizeQueryParams(params),
+  });
+
+  return unwrapApiResponse(response.data);
+};
+
+const listTransactionsByOrderId = async (
+  orderId: number | string,
+  params?: Omit<ListTransactionsParams, 'order_id'>,
+): Promise<TransactionDto[]> => {
+  const response = await apiClient.get<ApiResponse<TransactionDto[]>>(
+    `/transactions/order/${encodeURIComponent(String(orderId))}`,
+    { params: normalizeQueryParams(params) },
+  );
+
+  return unwrapApiResponse(response.data);
+};
+
 export const transactionService = {
   createTransaction,
+  listTransactions,
+  listTransactionsByOrderId,
 };

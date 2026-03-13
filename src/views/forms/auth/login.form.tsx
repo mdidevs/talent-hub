@@ -19,7 +19,7 @@ export const LoginForm: React.FC = () => {
   const location = useLocation();
 
   const getRedirectPath = React.useCallback(() => {
-    return (location.state as any)?.from || '/plan';
+    return (location.state as any)?.from || '/orders';
   }, [location.state]);
 
   React.useEffect(() => {
