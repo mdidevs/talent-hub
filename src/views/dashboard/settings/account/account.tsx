@@ -3,8 +3,77 @@ import { Field, FieldError, FieldGroup, FieldLabel, } from "@/components/atomic/
 import { Input } from "@/components/atomic/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, } from "@/components/atomic/select"
 import { Camera } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { authService } from "@/services/auth/auth.service"
+import type { User } from "@/types/auth.type"
 
 const Account = () => {
+    const [me, setMe] = useState<User | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    const [form, setForm] = useState({
+        firstName: "",
+        lastName: "",
+        email: "",
+        jobTitle: "",
+        companyName: "",
+        businessAddress1: "",
+        businessAddress2: "",
+        businessCategory: "",
+        // available but not yet placed in UI (we'll still fetch it)
+        workEmail: "",
+        workPhone: "",
+    })
+
+    const primaryCompany = useMemo(() => {
+        return me?.customer?.companies?.[0] ?? null
+    }, [me])
+
+    useEffect(() => {
+        let cancelled = false
+
+        const run = async () => {
+            setLoading(true)
+            try {
+                const payload = await authService.me()
+                if (cancelled) return
+                setMe(payload)
+
+                const firstName = payload.first_name ?? payload.customer?.first_name ?? ""
+                const lastName = payload.last_name ?? payload.customer?.last_name ?? ""
+                const email = payload.email ?? ""
+
+                const companyName = payload.customer?.companies?.[0]?.company?.name ?? ""
+                const businessAddress1 = payload.customer?.companies?.[0]?.company?.address ?? ""
+                const businessCategory = payload.customer?.companies?.[0]?.company?.category ?? ""
+
+                const jobTitle = payload.customer?.companies?.[0]?.customer_job_title ?? ""
+                const workEmail = payload.customer?.companies?.[0]?.customer_work_email ?? ""
+                const workPhone = payload.customer?.companies?.[0]?.customer_work_phone ?? ""
+
+                setForm((prev) => ({
+                    ...prev,
+                    firstName,
+                    lastName,
+                    email,
+                    jobTitle,
+                    companyName,
+                    businessAddress1,
+                    businessCategory,
+                    workEmail,
+                    workPhone,
+                }))
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        }
+
+        run()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
     return (
         <div className='space-y-4 md:space-y-16'>
             <div>
@@ -31,6 +100,9 @@ const Account = () => {
                                 <Input
                                     id="first name"
                                     type="text"
+                                    value={form.firstName}
+                                    onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+                                    disabled={loading}
                                 />
                                 <FieldError></FieldError>
                             </Field>
@@ -39,6 +111,9 @@ const Account = () => {
                                 <Input
                                     id="last name"
                                     type="text"
+                                    value={form.lastName}
+                                    onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+                                    disabled={loading}
                                 />
                                 <FieldError></FieldError>
                             </Field>
@@ -48,6 +123,9 @@ const Account = () => {
                             <Input
                                 id="email"
                                 type="text"
+                                value={form.email}
+                                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                                disabled={loading}
                             />
                             <FieldError></FieldError>
                         </Field>
@@ -56,9 +134,18 @@ const Account = () => {
                             <Input
                                 id="job-title"
                                 type="text"
+                                value={form.jobTitle}
+                                onChange={(e) => setForm((p) => ({ ...p, jobTitle: e.target.value }))}
+                                disabled={loading}
                             />
                         </Field>
                     </FieldGroup>
+                    {!!primaryCompany?.customer_work_email || !!primaryCompany?.customer_work_phone ? (
+                        <div className="mt-3 text-sm text-muted-foreground">
+                            {primaryCompany?.customer_work_email ? <div>Work email: {primaryCompany.customer_work_email}</div> : null}
+                            {primaryCompany?.customer_work_phone ? <div>Work phone: {primaryCompany.customer_work_phone}</div> : null}
+                        </div>
+                    ) : null}
                 </div>
             </div>
 
@@ -72,6 +159,9 @@ const Account = () => {
                     <Input
                         id="companey-name"
                         type="text"
+                        value={form.companyName}
+                        onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
+                        disabled={loading}
                     />
                 </Field>
                 <Field>
@@ -80,11 +170,17 @@ const Account = () => {
                         id="business-address"
                         type="text"
                         placeholder="Address line 1"
+                        value={form.businessAddress1}
+                        onChange={(e) => setForm((p) => ({ ...p, businessAddress1: e.target.value }))}
+                        disabled={loading}
                     />
                     <Input
                         id="business-address"
                         type="text"
                         placeholder="Address line 2"
+                        value={form.businessAddress2}
+                        onChange={(e) => setForm((p) => ({ ...p, businessAddress2: e.target.value }))}
+                        disabled={loading}
                     />
                 </Field>
                 <Field>
@@ -92,6 +188,9 @@ const Account = () => {
                     <Input
                         id="type-of-business"
                         type="text"
+                        value={form.businessCategory}
+                        onChange={(e) => setForm((p) => ({ ...p, businessCategory: e.target.value }))}
+                        disabled={loading}
                     />
                 </Field>
 
@@ -101,6 +200,7 @@ const Account = () => {
                         <Input
                             id="city"
                             type="text"
+                            disabled={loading}
                         />
                         <FieldError></FieldError>
                     </Field>
@@ -109,6 +209,7 @@ const Account = () => {
                         <Input
                             id="state"
                             type="text"
+                            disabled={loading}
                         />
                         <FieldError></FieldError>
                     </Field>
@@ -132,6 +233,7 @@ const Account = () => {
                         <Input
                             id="postel-code"
                             type="text"
+                            disabled={loading}
                         />
                         <FieldError></FieldError>
                     </Field>

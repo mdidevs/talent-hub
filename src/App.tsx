@@ -29,7 +29,7 @@ function App() {
           <Route element={<BasicLayout />}>
             {/* <Route path="/" element={<LoginPage />} /> */}
           </Route>
-          <Route element={<ProtectedRoute redirectIfAuthenticated={'/plan'}><AuthLayout /></ProtectedRoute>}>
+          <Route element={<ProtectedRoute redirectIfAuthenticated={'/orders'}><AuthLayout /></ProtectedRoute>}>
             <Route path="/" element={<LoginPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -49,7 +49,7 @@ function App() {
             <Route path="/setup" element={<Setup/>} />
             <Route path="/overview" element={<Overview/>} />
             <Route path="/orders" element={<Orders/>} />
-            <Route path='/orders/details' element={<OrderDetails/>}/>
+            <Route path='/orders/details/:id' element={<OrderDetails/>}/>
             <Route path="/settings" element={<Settings/>} />
           </Route>
         </Routes>
