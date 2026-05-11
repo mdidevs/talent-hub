@@ -4,6 +4,7 @@ import ProgressBar from '@/components/molecule/order/wizard/team/progressBar';
 import { ArrowLeft, ArrowRight, X, LogOut } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logoutUser } from '@/store/auth/auth.slice';
+import type { AppDispatch } from '@/store/store';
 // import Image from '../assets/auth-cover.jpg';
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -17,8 +18,8 @@ const OrderWizardLayout: React.FC = () => {
     const shiftAssignments = useSelector(selectWizardShiftAssignments);
     const seatAssignments = useSelector(selectWizardSeatAssignments);
     const navigate = useNavigate();
-    const dispatch = useDispatch();
-        const { prev, next, plan, creditLimit } = useWizard();
+    const dispatch = useDispatch<AppDispatch>();
+        const { prev, next } = useWizard();
         const location = useLocation();
         const isTeamRoute = location.pathname === '/team';
         const isSeatRoute = location.pathname === '/seat';
@@ -51,8 +52,6 @@ const OrderWizardLayout: React.FC = () => {
         return sum + price * (s.qty || 0);
     }, 0);
     const unit = categories[0]?.unit ?? '/ day';
-    const usageMax = plan === 'pro' ? 200 : plan === 'premium' ? 150 : (creditLimit ?? 0);
-    const usagePct = usageMax > 0 ? Math.min(100, Math.round((subtotal / usageMax) * 100)) : 0;
     const assignedCount = Object.values(shiftAssignments || {}).reduce((sum, ids) => sum + (ids?.length ?? 0), 0);
     const seatAssignmentCount = Object.values(seatAssignments || {}).reduce((sum, map) => sum + Object.keys(map ?? {}).length, 0);
     const hasTeamSelections = totalProfessionals > 0;

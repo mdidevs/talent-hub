@@ -87,6 +87,8 @@ const CheckoutForm = () => {
       return
     }
 
+    const customerId = user.customer_id
+
     if (!appConfig.stripePublishableKey) {
       setIntentState({
         ...defaultIntentState,
@@ -111,7 +113,7 @@ const CheckoutForm = () => {
         const createdOrder = await orderService.createOrder({
           currency,
           items: orderItems,
-          customer_id: user.customer_id,
+          customer_id: customerId,
         })
         if (isCancelled) return
 
@@ -227,7 +229,7 @@ const StripePaymentFields = ({
     }
 
     const serializedIntent = JSON.parse(JSON.stringify(intent)) as Record<string, unknown>
-    const minorUnits = intent.amount_received ?? intent.amount ?? Math.round(orderTotal * 100)
+    const minorUnits = intent.amount ?? Math.round(orderTotal * 100)
     const amountMajor = minorUnits / 100
 
     await transactionService.createTransaction({

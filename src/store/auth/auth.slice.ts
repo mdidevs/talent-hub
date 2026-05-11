@@ -53,7 +53,7 @@ export const registerUser = createAsyncThunk<
   AuthResponse,
   { name: string; email: string; password: string },
   { rejectValue: string }
->("auth/registerUser", async ({ name, email, password }, thunkAPI) => {
+>("auth/registerUser", async ({ name, email }, thunkAPI) => {
   try {
     // Simulate a local registration flow without calling remote APIs.
     const user: User = { id: String(Date.now()), name, email };
@@ -80,7 +80,7 @@ export const registerUser = createAsyncThunk<
 
 export const resetPassword = createAsyncThunk<boolean, { email: string }, { rejectValue: string }>(
   "auth/resetPassword",
-  async ({ email }, thunkAPI) => {
+  async (_payload, thunkAPI) => {
     try {
       // simulate sending reset email
       await new Promise((res) => setTimeout(res, 250));
@@ -94,7 +94,7 @@ export const resetPassword = createAsyncThunk<boolean, { email: string }, { reje
 
 export const newPassword = createAsyncThunk<boolean, { token?: string; password: string }, { rejectValue: string }>(
   'auth/newPassword',
-  async ({ token, password }, thunkAPI) => {
+  async (_payload, thunkAPI) => {
     try {
       // simulate applying new password (would normally use token + API)
       await new Promise((res) => setTimeout(res, 250));

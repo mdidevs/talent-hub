@@ -52,10 +52,6 @@ const SeatForm = () => {
         ? offices.find((office) => office.id === selectedOfficeId)
         : undefined;
     const currentFloor = floorOptions.find((opt) => opt.id === selectedFloor);
-    const availableSeats = currentFloor ? Math.max(0, currentFloor.total - currentFloor.used) : 0;
-    const officeMeta = (currentOffice?.data ?? {}) as Record<string, unknown>;
-    const officeTimezone = typeof officeMeta.timezone === 'string' ? officeMeta.timezone : 'N/A';
-    const officePhone = typeof officeMeta.phone === 'string' ? officeMeta.phone : '—';
 
     useEffect(() => {
         let mounted = true;

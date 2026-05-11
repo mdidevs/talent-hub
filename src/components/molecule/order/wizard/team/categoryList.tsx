@@ -14,8 +14,8 @@ type Category = {
     qty?: number | string;
 }
 
-const CategoryList: React.FC<Category & { onAdd?: (id: number | string, qty?: number) => void }> = ({ title = 'Role', description = '', price = '', unit = '/ day', qty = 0, id }) => {
-    const { selected, add, updateQty, remove } = useWizard();
+const CategoryList: React.FC<Category & { onAdd?: (id: number | string, qty?: number) => void }> = ({ title = 'Role', description = '', price = '', qty = 0, id }) => {
+    const { selected, add, remove } = useWizard();
     const totalForCategory = selected.reduce((sum, s) => String(s.categoryId) === String(id) ? sum + (s.qty || 0) : sum, 0);
     const count = Number(totalForCategory || qty || 0);
 

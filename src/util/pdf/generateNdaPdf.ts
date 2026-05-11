@@ -22,7 +22,8 @@ export async function generateNdaPdf(data: { fullName?: string; email?: string; 
   }
 
   const pdfBytes = await pdfDoc.save()
-  return new Blob([pdfBytes], { type: 'application/pdf' })
+  const blobBytes = Uint8Array.from(pdfBytes)
+  return new Blob([blobBytes], { type: 'application/pdf' })
 }
 
 export default generateNdaPdf

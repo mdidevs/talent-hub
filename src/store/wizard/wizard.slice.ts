@@ -251,8 +251,6 @@ const wizardSlice = createSlice({
   reducers: {
     addSelection: (state, action: PayloadAction<{ categoryId: number | string; qty?: number }>) => {
       const { categoryId, qty = 1 } = action.payload;
-      // build prospective selection set: push a new record for this add
-      const prospective = [...state.selected.map((s) => ({ ...s })), { categoryId, qty }];
       state.error = null;
       // push a new selection entry (do not merge with existing)
       // generate a stable instanceId for this selection
@@ -378,7 +376,7 @@ const wizardSlice = createSlice({
       .addCase(fetchWizardShifts.fulfilled, (state, action) => {
         state.shifts = action.payload as any;
       })
-      .addCase(fetchWizardShifts.rejected, (state) => {
+      .addCase(fetchWizardShifts.rejected, () => {
         // keep defaults on error
       });
   },

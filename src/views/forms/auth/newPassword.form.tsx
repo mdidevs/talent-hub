@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { Button } from '@/components/atomic/button';
 import { Field, FieldError, FieldGroup, FieldLabel, } from '@/components/atomic/field';
 import { Input } from '@/components/atomic/input';
@@ -14,7 +14,7 @@ export const NewPasswordForm: React.FC = () => {
   const { setNewPassword, isLoading, error } = useNewPassword();
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
-    resolver: newPasswordResolver,
+    resolver: newPasswordResolver as unknown as Resolver<FormValues>,
     mode: 'onTouched',
   });
 

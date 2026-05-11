@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { registerResolver } from '@/hooks/auth/register.hook';
 
 import { Button } from '@/components/atomic/button';
@@ -22,7 +22,7 @@ export const SignupForm: React.FC = () => {
   const { register: doRegister, isLoading, error: registerError } = useRegister();
 
   const { register, handleSubmit, control, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
-    resolver: registerResolver,
+    resolver: registerResolver as Resolver<FormValues>,
     mode: 'onTouched',
     defaultValues: { terms: false },
   });

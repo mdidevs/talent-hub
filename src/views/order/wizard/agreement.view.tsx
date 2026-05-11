@@ -4,19 +4,12 @@ import { useState, useRef } from "react";
 
 const AgreementView = () => {
   // State for PDF preview
-  const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
+  const [pdfUrl] = useState<string | undefined>(undefined);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Handler to be passed to NDA form to update PDF src and loader
-  const handlePdfPreview = (url?: string) => {
-    setPdfUrl(url);
-    setLoadingPdf(!!url);
-  };
-
   // Handler for iframe load event
   const handleIframeLoad = () => {
-    alert()
     setLoadingPdf(false);
   };
 

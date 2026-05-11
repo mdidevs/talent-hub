@@ -1,12 +1,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/atomic/table'
 import React from 'react'
 import { useSelector } from 'react-redux'
-import { selectWizardCategories, selectWizardShiftAssignments, selectWizardSeatAssignments, selectWizardSelected, selectWizardShifts } from '@/store/wizard/wizard.selector'
+import { selectWizardCategories, selectWizardSeatAssignments, selectWizardShifts } from '@/store/wizard/wizard.selector'
 
 const ReviewOrder: React.FC = () => {
     const categories = useSelector(selectWizardCategories)
-    const selected = useSelector(selectWizardSelected)
-    const shiftAssignments = useSelector(selectWizardShiftAssignments)
     const shiftSeatAssignments = useSelector(selectWizardSeatAssignments)
     const shifts = useSelector(selectWizardShifts) ?? []
 

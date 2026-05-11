@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RadioGroup } from "@/components/atomic/radio-group"
-import { PlansCard } from "@/components/molecule/order/wizard/plan/PlansCard"
+import { PlansCard } from "@/components/molecule/order/wizard/plan/plansCard"
 import useWizard from '@/hooks/wizard/wizard.hook'
-import { Input } from '@/components/atomic/input'
 import { pricingService, type PricingPlan } from '@/services/pricing/pricing.service'
 
 const normalizePlanValue = (value?: string | number | null) => String(value ?? '').toLowerCase();
@@ -44,7 +43,7 @@ const formatPlanPriceLabel = (plan: PricingPlan) => {
 };
 
 const PlanForm = () => {
-    const { selected, plan, choosePlan, choosePlanRate, creditLimit, setCredit, categories } = useWizard();
+    const { plan, choosePlan, choosePlanRate, creditLimit, setCredit } = useWizard();
     const [plans, setPlans] = useState<PricingPlan[]>([]);
     const [plansLoading, setPlansLoading] = useState(false);
     const [plansError, setPlansError] = useState<string | null>(null);
@@ -94,14 +93,6 @@ const PlanForm = () => {
         }
     }, [plans, plan, choosePlan, choosePlanRate]);
 
-    const subtotal = selected.reduce((sum, s) => {
-        const cat = categories.find((c) => String(c.id) === String(s.categoryId));
-        const price = cat ? Number(cat.price ?? 0) : 0;
-        return sum + price * (s.qty || 0);
-    }, 0);
-
-    const showCredit = subtotal > 0 || plan === 'team';
-
     const selectedPlan = useMemo(() => {
         return plans.find((p) => normalizePlanValue(getPlanIdentifier(p)) === normalizePlanValue(plan));
     }, [plans, plan]);
@@ -126,12 +117,6 @@ const PlanForm = () => {
             }
         }
     }, [planMax, creditLimit, setCredit]);
-
-    const displaySubtotal = subtotal.toFixed(2);
-    const usageMax = planMax ?? creditLimit ?? 0;
-    const totalProfessionals = selected.reduce((sum, s) => sum + (s.qty || 0), 0);
-    const unit = categories[0]?.unit ?? '/ day';
-    const usagePct = usageMax > 0 ? Math.min(100, Math.round((subtotal / usageMax) * 100)) : 0;
 
     return (
         <form>
